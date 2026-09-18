@@ -49,3 +49,6 @@ process.txt
 # playwright
 /test-results/
 /playwright-report/
+
+# uploaded media (local storage)
+/public/uploads/

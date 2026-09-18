@@ -5,14 +5,11 @@ import { z } from "zod";
  * process.env directly so a missing or malformed variable fails at boot with
  * a readable message rather than deep inside a request.
  *
- * Variables for services not wired up yet (payments, email, storage) are
- * optional here; the item that integrates each service tightens its schema.
+ * Variables for services not wired up yet (email) are optional here; the
+ * item that integrates the service tightens its schema. Payments are
+ * cash-on-delivery only and media lives on local disk, so there are no
+ * gateway or object-storage variables.
  */
-
-const bool = z
-  .enum(["true", "false"])
-  .default("false")
-  .transform((v) => v === "true");
 
 const schema = z.object({
   NODE_ENV: z
@@ -32,26 +29,9 @@ const schema = z.object({
   // Cron: shared secret for /api/cron/* routes.
   CRON_SECRET: z.string().min(16).optional(),
 
-  // Stripe
-  STRIPE_SECRET_KEY: z.string().startsWith("sk_").optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_").optional(),
-  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().startsWith("pk_").optional(),
-
-  // SSLCommerz
-  SSLCOMMERZ_STORE_ID: z.string().min(1).optional(),
-  SSLCOMMERZ_STORE_PASSWORD: z.string().min(1).optional(),
-  SSLCOMMERZ_SANDBOX: bool,
-
   // Email (Resend)
   RESEND_API_KEY: z.string().startsWith("re_").optional(),
   EMAIL_FROM: z.string().min(3).optional(),
-
-  // Storage (Cloudflare R2)
-  R2_ACCOUNT_ID: z.string().min(1).optional(),
-  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
-  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-  R2_BUCKET: z.string().min(1).optional(),
-  R2_PUBLIC_URL: z.url().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
