@@ -61,3 +61,43 @@ test("option builder generates the matrix and preserves existing variants", asyn
   await page.getByRole("button", { name: "Remove Blue" }).click();
   await expect(page.getByTestId("matrix-preview")).toContainText("3 variants · 3 kept, 0 new, 3 removed");
 });
+
+test("variant rows save price, compare-at, SKU and stock inline", async ({ page }) => {
+  await login(page);
+  const stamp = Date.now().toString(36);
+  await createProduct(page, `E2E Variants ${stamp}`);
+  await page.getByRole("button", { name: "Add option" }).click();
+  await page.getByLabel("Option 1 name").fill("Size");
+  const values = page.getByLabel("Values").first();
+  await values.fill("S");
+  await values.press("Enter");
+  await values.fill("M");
+  await values.press("Enter");
+  await page.getByRole("button", { name: "Save options" }).click();
+  const rows = page.locator("tbody tr");
+  await expect(rows).toHaveCount(2);
+
+  const row = rows.nth(0);
+  await row.getByLabel("S SKU").fill(`E2E-${stamp}-S`);
+  await row.getByLabel("S price").fill("1299.50");
+  await row.getByLabel("S compare-at price").fill("999");
+  await row.getByLabel("S stock").fill("12");
+  await row.getByRole("button", { name: "Save" }).click();
+  await expect(row.getByText("Compare-at must be higher than the price")).toBeVisible();
+  await expect(row.getByLabel("S price")).toHaveValue("1299.50"); // preserved
+
+  await row.getByLabel("S compare-at price").fill("1500");
+  await row.getByRole("button", { name: "Save" }).click();
+  await expect(row.getByLabel("Saved")).toBeVisible();
+
+  // Duplicate SKU on the other row is rejected on the field.
+  const row2 = rows.nth(1);
+  await row2.getByLabel("M SKU").fill(`E2E-${stamp}-S`);
+  await row2.getByRole("button", { name: "Save" }).click();
+  await expect(row2.getByText("Another variant already uses this SKU")).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator("tbody tr").nth(0).getByLabel("S price")).toHaveValue("1299.50");
+  await expect(page.locator("tbody tr").nth(0).getByLabel("S stock")).toHaveValue("12");
+  await expect(page.locator("tbody tr").nth(0).getByLabel("S SKU")).toHaveValue(`E2E-${stamp}-S`);
+});

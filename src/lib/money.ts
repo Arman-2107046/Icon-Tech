@@ -1,5 +1,3 @@
-import { env } from "@/src/lib/env";
-
 /**
  * Money is always an integer amount of minor units (poisha, cents) tagged
  * with its currency. Never a float, never a bare number. All arithmetic goes
@@ -14,8 +12,12 @@ export type Money = Readonly<{
   currency: Currency;
 }>;
 
-/** The store's configured currency. USD is opt-in via STORE_CURRENCY. */
-export const STORE_CURRENCY: Currency = env.STORE_CURRENCY;
+/**
+ * The store's configured currency. Read from a NEXT_PUBLIC_ variable so this
+ * module stays browser-safe; USD is opt-in via NEXT_PUBLIC_STORE_CURRENCY.
+ */
+export const STORE_CURRENCY: Currency =
+  process.env.NEXT_PUBLIC_STORE_CURRENCY === "USD" ? "USD" : "BDT";
 
 const MINOR_UNITS: Record<Currency, number> = {
   BDT: 100,

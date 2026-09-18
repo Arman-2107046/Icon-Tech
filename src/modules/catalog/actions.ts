@@ -8,7 +8,8 @@ import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
 import { cleanOptions, combinations, planVariants } from "./matrix";
-import { MAX_VARIANTS, optionsInputSchema, productInputSchema, slugify } from "./types";
+import { fromMajorUnits } from "@/src/lib/money";
+import { MAX_VARIANTS, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
 
 function readProductForm(formData: FormData) {
   const title = String(formData.get("title") ?? "");
@@ -163,5 +164,47 @@ export async function saveProductOptions(productId: string, _prev: ActionResult<
     });
 
     return ok({ created: plan.create.length, removed: plan.remove.length });
+  });
+}
+
+// ---- variant inline edit ----------------------------------------------------
+
+export async function updateVariant(variantId: string, _prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const parsed = variantInputSchema.safeParse({
+      sku: formData.get("sku") ?? "",
+      price: formData.get("price") ?? "",
+      compareAtPrice: formData.get("compareAtPrice") ?? "",
+      available: formData.get("available") ?? "0",
+    });
+    if (!parsed.success) return failFromZod(parsed.error);
+
+    const price = fromMajorUnits(parsed.data.price).amount;
+    const compareAtPrice = parsed.data.compareAtPrice ? fromMajorUnits(parsed.data.compareAtPrice).amount : null;
+    if (compareAtPrice !== null && compareAtPrice <= price) {
+      return fail("Please fix the highlighted fields.", { compareAtPrice: "Compare-at must be higher than the price" });
+    }
+
+    try {
+      await db.variant.update({
+        where: { id: variantId },
+        data: {
+          sku: parsed.data.sku,
+          price,
+          compareAtPrice,
+          inventory: {
+            upsert: {
+              create: { available: parsed.data.available, reserved: 0 },
+              update: { available: parsed.data.available },
+            },
+          },
+        },
+      });
+      return ok(null);
+    } catch (error) {
+      if (isUniqueViolation(error, "sku")) return fail("Please fix the highlighted fields.", { sku: "Another variant already uses this SKU" });
+      throw error;
+    }
   });
 }

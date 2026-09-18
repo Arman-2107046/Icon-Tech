@@ -48,7 +48,16 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
           initial={product.options.map((o) => ({ id: o.id, name: o.name, values: o.values.map((v) => ({ id: v.id, value: v.value })) }))}
           existingKeys={existingKeys}
         />
-        <VariantsTable product={product} />
+        <VariantsTable
+          variants={product.variants.map((v) => ({
+            id: v.id,
+            title: v.title,
+            sku: v.sku,
+            price: v.price,
+            compareAtPrice: v.compareAtPrice,
+            available: v.inventory?.available ?? 0,
+          }))}
+        />
       </div>
     </>
   );

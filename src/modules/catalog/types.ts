@@ -77,3 +77,23 @@ export type OptionsInput = z.infer<typeof optionsInputSchema>;
 
 /** Hard cap so a typo in the builder cannot create thousands of rows. */
 export const MAX_VARIANTS = 100;
+
+// ---- variant inline edit ----------------------------------------------------
+
+const moneyInput = z
+  .string()
+  .trim()
+  .regex(/^\d{1,9}([.,]\d{1,2})?$/, "Enter an amount like 1299 or 1299.50");
+
+export const variantInputSchema = z.object({
+  sku: z
+    .string()
+    .trim()
+    .max(64, "SKU is too long")
+    .transform((v) => (v === "" ? null : v)),
+  price: moneyInput,
+  compareAtPrice: z.union([z.literal(""), moneyInput]).transform((v) => (v === "" ? null : v)),
+  available: z.coerce.number().int("Stock must be a whole number").min(0, "Stock cannot be negative").max(1_000_000),
+});
+
+export type VariantInput = z.infer<typeof variantInputSchema>;
