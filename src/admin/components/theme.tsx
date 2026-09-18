@@ -7,7 +7,6 @@ import {
   useContext,
   useEffect,
   useLayoutEffect,
-  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -43,6 +42,26 @@ function readStored(): Theme {
   } catch {
     return "system";
   }
+}
+
+// The stored choice as an external store, so React reads it during render
+// (server snapshot "system") and re-renders when this or another tab sets it.
+const listeners = new Set<() => void>();
+function subscribeToStored(onChange: () => void) {
+  listeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+function writeStored(theme: Theme): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // Private mode: the choice just won't persist.
+  }
+  listeners.forEach((l) => l());
 }
 
 function systemPrefersDark(): boolean {
@@ -88,10 +107,7 @@ function subscribeToSystem(onChange: () => void) {
 export function AdminThemeProvider({ children }: { children: ReactNode }) {
   // Server renders "system"; the boot script has already set the class, so
   // the client value only matters for the toggle's checkmark.
-  const [theme, setThemeState] = useState<Theme>("system");
-  useEffect(() => {
-    setThemeState(readStored());
-  }, []);
+  const theme = useSyncExternalStore(subscribeToStored, readStored, () => "system" as Theme);
 
   // Apply before paint so a client-side navigation into the admin never
   // flashes the wrong scheme; re-run when the OS preference flips.
@@ -109,14 +125,7 @@ export function AdminThemeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Private mode: the choice just won't persist.
-    }
-  }, []);
+  const setTheme = useCallback((next: Theme) => writeStored(next), []);
 
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
 }
