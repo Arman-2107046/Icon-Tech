@@ -28,15 +28,17 @@ export function fail(error: string, fieldErrors?: FieldErrors): ActionFailure {
 
 /**
  * Collapse a ZodError into one message per field, keyed by dotted path.
- * The first issue for a field wins; users fix one thing at a time.
+ * The first issue for a field wins; users fix one thing at a time. An issue
+ * inside an array or object (e.g. countries.1) is also reported under its
+ * first segment, so a single input that holds a list shows the message.
  */
 export function zodFieldErrors(error: ZodError): FieldErrors {
   const fieldErrors: FieldErrors = {};
   for (const issue of error.issues) {
     const key = issue.path.length > 0 ? issue.path.join(".") : "_root";
-    if (!(key in fieldErrors)) {
-      fieldErrors[key] = issue.message;
-    }
+    if (!(key in fieldErrors)) fieldErrors[key] = issue.message;
+    const head = issue.path.length > 1 ? String(issue.path[0]) : null;
+    if (head && !(head in fieldErrors)) fieldErrors[head] = issue.message;
   }
   return fieldErrors;
 }
