@@ -1,0 +1,61 @@
+/*
+ * Storefront typography. Display headings are tight and dense; body text is
+ * loose and capped at a readable measure. Everything references tokens.
+ */
+
+@layer components {
+  /* ---- display (Space Grotesk) --------------------------------------- */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+  .display-5xl { font-size: var(--text-5xl); letter-spacing: -0.03em; line-height: 1.05; }
+  .display-4xl { font-size: var(--text-4xl); letter-spacing: -0.03em; line-height: 1.05; }
+  .display-3xl { font-size: var(--text-3xl); letter-spacing: -0.025em; line-height: 1.08; }
+  .display-2xl { font-size: var(--text-2xl); letter-spacing: -0.025em; line-height: 1.1; }
+  .display-xl  { font-size: var(--text-xl);  letter-spacing: -0.02em;  line-height: 1.12; }
+  .display-lg  { font-size: var(--text-lg);  letter-spacing: -0.02em;  line-height: 1.15; }
+  .display-md  { font-size: var(--text-md);  letter-spacing: -0.02em;  line-height: 1.15; }
+
+  /* ---- body (Geist) -------------------------------------------------- */
+  .body {
+    font-family: var(--font-text);
+    font-size: var(--text-base);
+    line-height: 1.65;
+    max-width: var(--measure);
+  }
+  .body-lg { font-size: var(--text-md); line-height: 1.6; }
+  .body-sm { font-size: var(--text-sm); line-height: 1.6; }
+
+  /* Small caps-style label for eyebrows, badges, nav. */
+  .label {
+    font-family: var(--font-text);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* Rendered markdown (pages, product descriptions). */
+  .prose-sf {
+    font-family: var(--font-text);
+    font-size: var(--text-base);
+    line-height: 1.7;
+    max-width: var(--measure);
+    color: var(--ink);
+  }
+  .prose-sf > * + * { margin-top: var(--space-2); }
+  .prose-sf h2 { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; margin-top: var(--space-5); }
+  .prose-sf h3 { font-family: var(--font-display); font-size: var(--text-md); font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; margin-top: var(--space-4); }
+  .prose-sf ul { padding-left: 1.25em; list-style: disc; }
+  .prose-sf ol { padding-left: 1.25em; list-style: decimal; }
+  .prose-sf li + li { margin-top: var(--space-0-5); }
+  .prose-sf a { color: var(--accent-500); text-decoration: underline; text-underline-offset: 0.15em; }
+  .prose-sf a:hover { color: var(--accent-600); }
+  .prose-sf strong { font-weight: 600; }
+  .prose-sf hr { border: 0; border-top: 1px solid var(--line); margin-block: var(--space-4); }
+}
