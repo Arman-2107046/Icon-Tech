@@ -94,3 +94,30 @@ model VariantOptionValue {
   @@index([optionValueId])
   @@map("variant_option_values")
 }
+
+enum MediaOwnerType {
+  PRODUCT
+  VARIANT
+  COLLECTION
+  PAGE
+}
+
+/// Uploaded image or video. Polymorphic: (ownerType, ownerId) points at the
+/// owning row, so there is no FK. Width/height/blurhash are captured at
+/// upload so the storefront can reserve space and paint a placeholder.
+model Media {
+  id        String         @id @default(cuid())
+  ownerType MediaOwnerType @map("owner_type")
+  ownerId   String         @map("owner_id")
+  url       String
+  mimeType  String         @map("mime_type")
+  width     Int
+  height    Int
+  blurhash  String?
+  alt       String         @default("")
+  position  Int            @default(0)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@index([ownerType, ownerId, position])
+  @@map("media")
+}
