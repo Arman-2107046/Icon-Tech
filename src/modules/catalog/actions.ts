@@ -9,7 +9,8 @@ import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
 import { cleanOptions, combinations, planVariants } from "./matrix";
 import { fromMajorUnits } from "@/src/lib/money";
-import { MAX_VARIANTS, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
+import { deleteUpload } from "@/src/lib/storage";
+import { MAX_VARIANTS, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
 
 function readProductForm(formData: FormData) {
   const title = String(formData.get("title") ?? "");
@@ -206,5 +207,35 @@ export async function updateVariant(variantId: string, _prev: ActionResult<null>
       if (isUniqueViolation(error, "sku")) return fail("Please fix the highlighted fields.", { sku: "Another variant already uses this SKU" });
       throw error;
     }
+  });
+}
+
+// ---- media ------------------------------------------------------------------
+
+export async function updateMediaAlt(mediaId: string, _prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const parsed = mediaAltSchema.safeParse({ alt: formData.get("alt") ?? "" });
+    if (!parsed.success) return failFromZod(parsed.error);
+    await db.media.update({ where: { id: mediaId }, data: { alt: parsed.data.alt } });
+    return ok(null);
+  });
+}
+
+export async function deleteMedia(mediaId: string): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const media = await db.media.findUnique({ where: { id: mediaId } });
+    if (!media) return ok(null);
+    await db.$transaction(async (tx) => {
+      await tx.media.delete({ where: { id: mediaId } });
+      // Close the gap so positions stay contiguous.
+      await tx.media.updateMany({
+        where: { ownerType: media.ownerType, ownerId: media.ownerId, position: { gt: media.position } },
+        data: { position: { decrement: 1 } },
+      });
+    });
+    await deleteUpload(media.url);
+    return ok(null);
   });
 }

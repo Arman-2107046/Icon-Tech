@@ -1,0 +1,138 @@
+"use client";
+
+import { ImagePlus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
+import { Button } from "@/src/admin/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/admin/components/ui/card";
+import { deleteMedia } from "@/src/modules/catalog/actions";
+import { readImageMeta } from "./image-meta";
+import { MediaAltForm } from "./media-alt-form";
+
+export type MediaCardData = {
+  id: string;
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
+  blurhash: string | null;
+  position: number;
+};
+
+type OwnerType = "PRODUCT" | "VARIANT" | "COLLECTION" | "PAGE";
+
+type UploadState = { name: string; status: "reading" | "uploading" | "error"; error?: string };
+
+export function MediaManager({ ownerType, ownerId, media }: { ownerType: OwnerType; ownerId: string; media: MediaCardData[] }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploads, setUploads] = useState<UploadState[]>([]);
+  const [isPending, startTransition] = useTransition();
+
+  const setStatus = (name: string, patch: Partial<UploadState>) =>
+    setUploads((list) => list.map((u) => (u.name === name ? { ...u, ...patch } : u)));
+
+  async function upload(file: File) {
+    setUploads((list) => [...list, { name: file.name, status: "reading" }]);
+    try {
+      const meta = await readImageMeta(file);
+      setStatus(file.name, { status: "uploading" });
+      const body = new FormData();
+      body.set("file", file);
+      body.set("ownerType", ownerType);
+      body.set("ownerId", ownerId);
+      body.set("width", String(meta.width));
+      body.set("height", String(meta.height));
+      body.set("blurhash", meta.blurhash);
+      body.set("alt", "");
+      const res = await fetch("/api/admin/media", { method: "POST", body });
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? `Upload failed (${res.status})`);
+      setUploads((list) => list.filter((u) => u.name !== file.name));
+      router.refresh();
+    } catch (error) {
+      setStatus(file.name, { status: "error", error: error instanceof Error ? error.message : "Upload failed" });
+    }
+  }
+
+  function onFiles(files: FileList | null) {
+    if (!files) return;
+    for (const file of Array.from(files)) void upload(file);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function remove(id: string) {
+    startTransition(async () => {
+      await deleteMedia(id);
+      router.refresh();
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Media</CardTitle>
+        <CardDescription>JPEG, PNG, WebP, GIF or AVIF up to 10 MB. The first image is the cover.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" data-testid="media-grid">
+          {media.map((m, index) => (
+            <figure key={m.id} className="space-y-2 rounded-md border p-2" data-testid="media-item" data-blurhash={m.blurhash ?? ""}>
+              <div className="relative aspect-[4/5] overflow-hidden rounded bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of arbitrary hosts */}
+                <img src={m.url} alt={m.alt} className="size-full object-cover" />
+                {index === 0 ? (
+                  <span className="absolute left-1.5 top-1.5 rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+                    Cover
+                  </span>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="absolute right-1.5 top-1.5 size-7"
+                  aria-label={`Delete image ${index + 1}`}
+                  disabled={isPending}
+                  onClick={() => remove(m.id)}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
+              <MediaAltForm mediaId={m.id} alt={m.alt} index={index} />
+              <figcaption className="text-[11px] text-muted-foreground">
+                {m.width} × {m.height}
+              </figcaption>
+            </figure>
+          ))}
+
+          {uploads.map((u) => (
+            <div key={u.name} className="flex aspect-[4/5] flex-col items-center justify-center rounded-md border border-dashed p-2 text-center text-xs">
+              <span className="truncate font-medium">{u.name}</span>
+              <span className={u.status === "error" ? "text-destructive" : "text-muted-foreground"}>
+                {u.status === "reading" ? "Reading…" : u.status === "uploading" ? "Uploading…" : u.error}
+              </span>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex aspect-[4/5] flex-col items-center justify-center gap-2 rounded-md border border-dashed text-sm text-muted-foreground hover:bg-muted/50"
+          >
+            <ImagePlus className="size-5" />
+            Add images
+          </button>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+          multiple
+          className="sr-only"
+          aria-label="Upload images"
+          onChange={(e) => onFiles(e.target.files)}
+        />
+      </CardContent>
+    </Card>
+  );
+}

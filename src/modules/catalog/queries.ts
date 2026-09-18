@@ -117,3 +117,11 @@ export async function getProductForAdmin(id: string) {
 }
 
 export type AdminProduct = NonNullable<Awaited<ReturnType<typeof getProductForAdmin>>>;
+
+// ---- media ------------------------------------------------------------------
+
+export async function listMedia(ownerType: "PRODUCT" | "VARIANT" | "COLLECTION" | "PAGE", ownerId: string) {
+  return db.media.findMany({ where: { ownerType, ownerId }, orderBy: { position: "asc" } });
+}
+
+export type MediaItem = Awaited<ReturnType<typeof listMedia>>[number];

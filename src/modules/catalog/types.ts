@@ -97,3 +97,24 @@ export const variantInputSchema = z.object({
 });
 
 export type VariantInput = z.infer<typeof variantInputSchema>;
+
+// ---- media ------------------------------------------------------------------
+
+export const MEDIA_OWNER_TYPES = ["PRODUCT", "VARIANT", "COLLECTION", "PAGE"] as const;
+
+export const mediaMetaSchema = z.object({
+  ownerType: z.enum(MEDIA_OWNER_TYPES),
+  ownerId: z.string().min(1),
+  width: z.coerce.number().int().min(1).max(20000),
+  height: z.coerce.number().int().min(1).max(20000),
+  blurhash: z
+    .string()
+    .trim()
+    .min(6)
+    .max(120)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  alt: z.string().trim().max(200).default(""),
+});
+
+export const mediaAltSchema = z.object({ alt: z.string().trim().max(200, "Alt text is limited to 200 characters") });
