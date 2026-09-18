@@ -15,6 +15,7 @@ model Customer {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   addresses Address[]
+  carts     Cart[]
 
   @@index([createdAt])
   @@map("customers")
