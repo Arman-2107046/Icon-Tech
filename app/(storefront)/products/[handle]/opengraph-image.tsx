@@ -22,6 +22,7 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
     (
       <div style={{ display: "flex", width: "100%", height: "100%", background: og.canvas, color: og.ink, fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", width: 504, height: "100%", background: og.neutral200, overflow: "hidden" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Satori renders plain <img> */}
           {cover ? <img src={cover.startsWith("http") ? cover : absoluteUrl(cover)} alt="" width={504} height={630} style={{ objectFit: "cover", width: 504, height: 630 }} /> : null}
         </div>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: 56 }}>
