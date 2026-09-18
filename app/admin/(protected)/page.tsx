@@ -1,15 +1,16 @@
-import { getAdminSession } from "@/src/lib/auth/session";
-import { adminLogout } from "@/src/lib/auth/admin-actions";
+import { PageHeader } from "@/src/admin/components/page-header";
+import { requireAdmin } from "@/src/lib/auth/guards";
 
 export default async function AdminHomePage() {
-  const session = await getAdminSession();
+  const session = await requireAdmin();
   return (
-    <main className="p-8">
-      <h1 className="text-xl font-semibold">Admin</h1>
-      <p className="mt-2 text-sm text-zinc-600">Signed in as {session?.user.email ?? "nobody"}.</p>
-      <form action={adminLogout} className="mt-4">
-        <button type="submit" className="rounded-md border px-3 py-1.5 text-sm">Sign out</button>
-      </form>
-    </main>
+    <>
+      <PageHeader title="Dashboard" />
+      <div className="p-6">
+        <p className="text-sm text-muted-foreground">
+          Signed in as {session.user.email}. Dashboard metrics arrive in item 107.
+        </p>
+      </div>
+    </>
   );
 }
