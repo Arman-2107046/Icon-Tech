@@ -6,7 +6,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/src/lib/db";
 import { tags } from "@/src/lib/cache-tags";
 import { buildMenuTree } from "./queries";
-import { DEFAULT_SITE_SETTINGS, siteSettingsSchema, type SiteSettings } from "./types";
+import { DEFAULT_SITE_SETTINGS, siteSettingsSchema, type SiteSettings, type StorefrontMenu } from "./types";
 
 export async function getCachedSiteSettings(): Promise<SiteSettings> {
   "use cache";
@@ -17,7 +17,7 @@ export async function getCachedSiteSettings(): Promise<SiteSettings> {
   return parsed.success ? parsed.data : DEFAULT_SITE_SETTINGS;
 }
 
-export async function getMenu(handle: string) {
+export async function getMenu(handle: string): Promise<StorefrontMenu | null> {
   "use cache";
   cacheLife("max");
   cacheTag(tags.menu(handle), tags.menus);
@@ -26,7 +26,6 @@ export async function getMenu(handle: string) {
   return { id: menu.id, handle: menu.handle, title: menu.title, items: buildMenuTree(menu.items) };
 }
 
-export type StorefrontMenu = NonNullable<Awaited<ReturnType<typeof getMenu>>>;
 
 export async function getPublishedPage(handle: string) {
   "use cache";

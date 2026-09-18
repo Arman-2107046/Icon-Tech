@@ -136,3 +136,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = siteSettingsSchema.parse({
     ],
   },
 });
+
+// ---- storefront (browser-safe) ---------------------------------------------
+
+export type MenuItemNode = { id: string; label: string; url: string; parentId: string | null; position: number };
+export type StorefrontMenu = { id: string; handle: string; title: string; items: (MenuItemNode & { children: MenuItemNode[] })[] };
