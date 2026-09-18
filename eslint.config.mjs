@@ -11,6 +11,27 @@ const eslintConfig = defineConfig([
       // Project rule: no escape hatches from the type system.
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
+      // Modules talk only through their index.ts public API.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/src/modules/*/*",
+                "**/modules/*/queries",
+                "**/modules/*/actions",
+                "**/modules/*/types",
+                "../*/queries",
+                "../*/actions",
+                "../*/types",
+              ],
+              message:
+                "Import from the module's index.ts (e.g. '@/src/modules/catalog'), never from its internals.",
+            },
+          ],
+        },
+      ],
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
