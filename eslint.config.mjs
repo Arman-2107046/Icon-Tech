@@ -32,6 +32,18 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
+      // No literal colours in code: everything comes from app/tokens.css.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/#[0-9a-fA-F]{3,8}(?![0-9a-zA-Z])/]",
+          message: "Hardcoded hex colour. Use a token utility (bg-ink, text-brand …) or a CSS variable from app/tokens.css.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}(?![0-9a-zA-Z])/]",
+          message: "Hardcoded hex colour. Use a token utility (bg-ink, text-brand …) or a CSS variable from app/tokens.css.",
+        },
+      ],
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
@@ -44,9 +56,14 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Unit tests exercise module internals directly.
+    // Unit tests exercise module internals directly; test fixtures may hold colours.
     files: ["tests/**/*.ts"],
-    rules: { "no-restricted-imports": "off" },
+    rules: { "no-restricted-imports": "off", "no-restricted-syntax": "off" },
+  },
+  {
+    // Seed data and scripts are not UI code.
+    files: ["prisma/**/*.ts", "scripts/**/*.mjs"],
+    rules: { "no-restricted-syntax": "off" },
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([
