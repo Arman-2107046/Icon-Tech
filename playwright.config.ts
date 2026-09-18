@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { defineConfig, devices } from "@playwright/test";
 
 // Dedicated port so an unrelated dev server on 3000 is never picked up.

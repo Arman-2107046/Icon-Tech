@@ -28,3 +28,13 @@ export async function actAndWait(page: Page, act: () => Promise<void>) {
   await act();
   await response;
 }
+
+/**
+ * Give back every inventory hold (abandoned test carts would otherwise make
+ * popular variants look sold out). Uses the cron route with CRON_SECRET.
+ */
+export async function releaseAllHolds(request: import("@playwright/test").APIRequestContext) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return;
+  await request.post("/api/cron/release-reservations", { headers: { authorization: `Bearer ${secret}` }, data: { olderThanMinutes: 0 } });
+}
