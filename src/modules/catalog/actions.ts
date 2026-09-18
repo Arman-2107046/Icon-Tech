@@ -239,3 +239,17 @@ export async function deleteMedia(mediaId: string): Promise<ActionResult<null>> 
     return ok(null);
   });
 }
+
+/** Persist a new media order. `orderedIds` must be exactly the owner's media ids. */
+export async function reorderMedia(ownerType: "PRODUCT" | "VARIANT" | "COLLECTION" | "PAGE", ownerId: string, orderedIds: string[]): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const current = await db.media.findMany({ where: { ownerType, ownerId }, select: { id: true } });
+    const currentIds = new Set(current.map((m) => m.id));
+    if (orderedIds.length !== currentIds.size || !orderedIds.every((id) => currentIds.has(id)) || new Set(orderedIds).size !== orderedIds.length) {
+      return fail("The media list changed; reload and try again.");
+    }
+    await db.$transaction(orderedIds.map((id, position) => db.media.update({ where: { id }, data: { position } })));
+    return ok(null);
+  });
+}

@@ -59,3 +59,36 @@ test("upload an image, edit its alt text, delete it", async ({ page }) => {
   await expect(page.getByTestId("media-item")).toHaveCount(0);
   await expect.poll(async () => (await page.request.get(src ?? "")).status()).toBe(404);
 });
+
+test("reorder media by dragging and with the move buttons; order persists", async ({ page }) => {
+  await login(page);
+  await page.goto("/admin/products/new");
+  await page.getByRole("textbox", { name: "Title", exact: true }).fill(`E2E Reorder ${Date.now().toString(36)}`);
+  await page.getByRole("button", { name: "Create product" }).click();
+  await page.waitForURL(/\/admin\/products\/[a-z0-9]+$/);
+
+  const items = page.getByTestId("media-item");
+  for (const name of ["a.png", "b.png", "c.png"]) {
+    await page.getByLabel("Upload images").setInputFiles({ name, mimeType: "image/png", buffer: makePng() });
+    await expect(items).toHaveCount(["a.png", "b.png", "c.png"].indexOf(name) + 1);
+  }
+  const ids = async () => items.evaluateAll((els) => els.map((el) => el.getAttribute("data-media-id")));
+  const [a, b, c] = await ids();
+
+  // Drag the third onto the first: c, a, b
+  await items.nth(2).dragTo(items.nth(0));
+  await expect.poll(ids).toEqual([c, a, b]);
+
+  // Move "a" (now second) later: c, b, a
+  await page.getByRole("button", { name: "Move image 2 later" }).click();
+  await expect.poll(ids).toEqual([c, b, a]);
+
+  await page.reload();
+  await expect.poll(ids).toEqual([c, b, a]);
+  await expect(page.getByTestId("media-item").first().getByText("Cover")).toBeVisible();
+
+  for (let i = 3; i > 0; i--) {
+    await page.getByRole("button", { name: "Delete image 1" }).click();
+    await expect(page.getByTestId("media-item")).toHaveCount(i - 1);
+  }
+});
