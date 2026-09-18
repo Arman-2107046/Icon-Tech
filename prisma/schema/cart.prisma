@@ -12,13 +12,16 @@ enum CartStatus {
 /// active cart. Totals are never stored: they are recomputed from variant
 /// prices on every read.
 model Cart {
-  id         String     @id @default(cuid())
-  customerId String?    @map("customer_id")
-  token      String     @unique
-  currency   String     @db.Char(3)
-  status     CartStatus @default(ACTIVE)
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
+  id           String     @id @default(cuid())
+  customerId   String?    @map("customer_id")
+  token        String     @unique
+  currency     String     @db.Char(3)
+  status       CartStatus @default(ACTIVE)
+  /// Checkout progress: { contact, shippingAddress, billingAddress, shippingRateId, step }.
+  /// Validated by the checkout module's Zod schema; null until checkout starts.
+  checkoutData Json?      @map("checkout_data")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   customer     Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
   items        CartItem[]
