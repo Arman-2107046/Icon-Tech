@@ -1,2 +1,54 @@
 // discounts module schema. Models for this module live here.
 // Merged with the other files in prisma/schema/ by Prisma.
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+/// A code the customer enters at checkout. `value` is basis points for
+/// PERCENTAGE (1000 = 10%), integer minor units for FIXED_AMOUNT, and
+/// ignored for FREE_SHIPPING. Only `stackable` discounts may be combined;
+/// stacking order and caps live in the discounts service.
+model Discount {
+  id                String       @id @default(cuid())
+  code              String       @unique
+  title             String
+  type              DiscountType
+  value             Int          @default(0)
+  minOrderSubtotal  Int?         @map("min_order_subtotal")
+  usageLimit        Int?         @map("usage_limit")
+  usageLimitPerUser Int?         @map("usage_limit_per_user")
+  stackable         Boolean      @default(false)
+  active            Boolean      @default(true)
+  startsAt          DateTime?    @map("starts_at")
+  endsAt            DateTime?    @map("ends_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  redemptions DiscountRedemption[]
+
+  @@index([active, startsAt, endsAt])
+  @@map("discounts")
+}
+
+/// One row per order that used the discount. Counting rows enforces
+/// `usageLimit`; counting per customer enforces `usageLimitPerUser`.
+model DiscountRedemption {
+  id         String   @id @default(cuid())
+  discountId String   @map("discount_id")
+  orderId    String   @map("order_id")
+  customerId String?  @map("customer_id")
+  /// Amount actually taken off the order, integer minor units.
+  amount     Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  discount Discount  @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([discountId, orderId])
+  @@index([discountId, customerId])
+  @@map("discount_redemptions")
+}

@@ -14,9 +14,10 @@ model Customer {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  addresses Address[]
-  carts     Cart[]
-  orders    Order[]
+  addresses           Address[]
+  carts               Cart[]
+  orders              Order[]
+  discountRedemptions DiscountRedemption[]
 
   @@index([createdAt])
   @@map("customers")

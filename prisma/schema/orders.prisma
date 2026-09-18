@@ -59,11 +59,12 @@ model Order {
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
-  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items        OrderItem[]
-  payments     Payment[]
-  refunds      Refund[]
-  fulfillments Fulfillment[]
+  customer            Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items               OrderItem[]
+  payments            Payment[]
+  refunds             Refund[]
+  fulfillments        Fulfillment[]
+  discountRedemptions DiscountRedemption[]
 
   @@index([customerId, placedAt])
   @@index([status, placedAt])
