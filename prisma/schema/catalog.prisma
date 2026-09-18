@@ -20,8 +20,9 @@ model Product {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  options  ProductOption[]
-  variants Variant[]
+  options     ProductOption[]
+  variants    Variant[]
+  collections CollectionProduct[]
 
   @@index([status])
   @@index([vendor])
@@ -120,4 +121,44 @@ model Media {
 
   @@index([ownerType, ownerId, position])
   @@map("media")
+}
+
+enum CollectionType {
+  MANUAL
+  RULE
+}
+
+/// MANUAL collections list products explicitly via CollectionProduct.
+/// RULE collections resolve membership from `rules` at query time:
+/// { match: "all" | "any", conditions: [{ field, operator, value }] }.
+model Collection {
+  id             String         @id @default(cuid())
+  handle         String         @unique
+  title          String
+  description    String         @default("")
+  type           CollectionType @default(MANUAL)
+  rules          Json?
+  imageUrl       String?        @map("image_url")
+  seoTitle       String?        @map("seo_title")
+  seoDescription String?        @map("seo_description")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  products CollectionProduct[]
+
+  @@map("collections")
+}
+
+model CollectionProduct {
+  collectionId String @map("collection_id")
+  productId    String @map("product_id")
+  position     Int    @default(0)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([collectionId, position])
+  @@index([productId])
+  @@map("collection_products")
 }
