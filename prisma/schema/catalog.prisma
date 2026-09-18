@@ -20,7 +20,8 @@ model Product {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  options ProductOption[]
+  options  ProductOption[]
+  variants Variant[]
 
   @@index([status])
   @@index([vendor])
@@ -49,9 +50,47 @@ model ProductOptionValue {
   value    String
   position Int    @default(0)
 
-  option ProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  option   ProductOption        @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  variants VariantOptionValue[]
 
   @@unique([optionId, value])
   @@index([optionId, position])
   @@map("product_option_values")
+}
+
+/// A purchasable SKU. All money columns are integer minor units in the
+/// store currency (see src/lib/money.ts). Never store floats.
+model Variant {
+  id             String   @id @default(cuid())
+  productId      String   @map("product_id")
+  title          String
+  sku            String?  @unique
+  barcode        String?
+  price          Int
+  compareAtPrice Int?     @map("compare_at_price")
+  cost           Int?
+  weightGrams    Int?     @map("weight_grams")
+  position       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  product      Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValues VariantOptionValue[]
+
+  @@index([productId, position])
+  @@index([barcode])
+  @@map("variants")
+}
+
+/// Which option value a variant carries on each axis, e.g. Size=M, Colour=Red.
+model VariantOptionValue {
+  variantId     String @map("variant_id")
+  optionValueId String @map("option_value_id")
+
+  variant     Variant            @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionValueId])
+  @@index([optionValueId])
+  @@map("variant_option_values")
 }
