@@ -75,8 +75,10 @@ model Variant {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  product      Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
   optionValues VariantOptionValue[]
+  inventory    InventoryItem?
+  reservations InventoryReservation[]
 
   @@index([productId, position])
   @@index([barcode])
@@ -161,4 +163,37 @@ model CollectionProduct {
   @@index([collectionId, position])
   @@index([productId])
   @@map("collection_products")
+}
+
+/// Stock for one variant. `available` is on-hand stock; `reserved` is the
+/// portion held by open checkouts. Sellable = available - reserved.
+/// Reserve on checkout start, commit on payment success, release on expiry.
+model InventoryItem {
+  id        String   @id @default(cuid())
+  variantId String   @unique @map("variant_id")
+  available Int      @default(0)
+  reserved  Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_items")
+}
+
+/// A hold placed by a checkout session. The cron route releases rows past
+/// `expiresAt` and decrements InventoryItem.reserved by `quantity`.
+/// cartId gains its FK once the cart model exists (item 16).
+model InventoryReservation {
+  id        String   @id @default(cuid())
+  cartId    String   @map("cart_id")
+  variantId String   @map("variant_id")
+  quantity  Int
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@index([expiresAt])
+  @@map("inventory_reservations")
 }
