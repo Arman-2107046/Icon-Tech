@@ -1,2 +1,74 @@
 // content module schema. Models for this module live here.
 // Merged with the other files in prisma/schema/ by Prisma.
+
+/// A static page such as /pages/about or /pages/shipping-policy.
+model Page {
+  id             String    @id @default(cuid())
+  handle         String    @unique
+  title          String
+  /// Markdown body.
+  body           String    @default("")
+  seoTitle       String?   @map("seo_title")
+  seoDescription String?   @map("seo_description")
+  publishedAt    DateTime? @map("published_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("pages")
+}
+
+/// A named navigation such as "main" or "footer".
+model Menu {
+  id        String   @id @default(cuid())
+  handle    String   @unique
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items MenuItem[]
+
+  @@map("menus")
+}
+
+/// One link in a menu. Nested via `parentId`; ordered by `position` among
+/// siblings. `url` is a path or absolute URL.
+model MenuItem {
+  id       String  @id @default(cuid())
+  menuId   String  @map("menu_id")
+  parentId String? @map("parent_id")
+  label    String
+  url      String
+  position Int     @default(0)
+
+  menu     Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent   MenuItem?  @relation("MenuItemChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children MenuItem[] @relation("MenuItemChildren")
+
+  @@index([menuId, parentId, position])
+  @@map("menu_items")
+}
+
+/// Single-row table (id is always "default") holding store-wide settings:
+/// store name, contact details, homepage section order, social links.
+/// Kept as JSON so adding a setting does not need a migration; the shape
+/// is validated by a Zod schema in the content module.
+model SiteSettings {
+  id        String   @id @default("default")
+  data      Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+/// Path-level redirect served by the proxy before routing. `fromPath` is
+/// matched exactly (no wildcards) after trailing-slash normalisation.
+model Redirect {
+  id         String   @id @default(cuid())
+  fromPath   String   @unique @map("from_path")
+  toPath     String   @map("to_path")
+  statusCode Int      @default(301) @map("status_code")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("redirects")
+}
