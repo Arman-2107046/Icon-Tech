@@ -7,7 +7,10 @@ import { type ActionResult, fail, failFromZod, ok, runAction } from "@/src/lib/a
 import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
-import { menuInputSchema, menuItemInputSchema, pageInputSchema, slugify } from "./types";
+import { z } from "zod";
+import { fromMajorUnits } from "@/src/lib/money";
+import { getSiteSettings } from "./queries";
+import { homepageSectionSchema, menuInputSchema, menuItemInputSchema, pageInputSchema, siteSettingsSchema, slugify, type SiteSettings } from "./types";
 
 // ---- pages ------------------------------------------------------------------
 
@@ -190,6 +193,76 @@ export async function moveMenuItem(itemId: string, direction: "up" | "down"): Pr
       db.menuItem.update({ where: { id: item.id }, data: { position: swapWith.position } }),
       db.menuItem.update({ where: { id: swapWith.id }, data: { position: item.position } }),
     ]);
+    return ok(null);
+  });
+}
+
+// ---- site settings ----------------------------------------------------------
+
+async function patchSettings(patch: (current: SiteSettings) => SiteSettings): Promise<void> {
+  const current = await getSiteSettings();
+  const next = siteSettingsSchema.parse(patch(current));
+  await db.siteSettings.upsert({ where: { id: "default" }, create: { id: "default", data: next }, update: { data: next } });
+}
+
+export async function updateStoreSettings(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const parsed = siteSettingsSchema.shape.store.safeParse({
+      name: formData.get("name") ?? "",
+      tagline: formData.get("tagline") ?? "",
+      email: formData.get("email") ?? "",
+      phone: formData.get("phone") ?? "",
+      address: formData.get("address") ?? "",
+    });
+    if (!parsed.success) return failFromZod(parsed.error);
+    const social = siteSettingsSchema.shape.social.safeParse({
+      instagram: formData.get("instagram") ?? "",
+      facebook: formData.get("facebook") ?? "",
+      youtube: formData.get("youtube") ?? "",
+    });
+    if (!social.success) return failFromZod(social.error);
+    await patchSettings((s) => ({ ...s, store: parsed.data, social: social.data }));
+    return ok(null);
+  });
+}
+
+export async function updateEmailSettings(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const parsed = siteSettingsSchema.shape.email.safeParse({ fromName: formData.get("fromName") ?? "", fromAddress: formData.get("fromAddress") ?? "" });
+    if (!parsed.success) return failFromZod(parsed.error);
+    await patchSettings((s) => ({ ...s, email: parsed.data }));
+    return ok(null);
+  });
+}
+
+export async function updateCheckoutSettings(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const raw = String(formData.get("freeShippingThreshold") ?? "").trim();
+    if (raw !== "" && !/^\d{1,9}([.,]\d{1,2})?$/.test(raw)) {
+      return fail("Please fix the highlighted fields.", { freeShippingThreshold: "Enter an amount like 5000" });
+    }
+    const threshold = raw === "" ? null : fromMajorUnits(raw).amount;
+    const codEnabled = formData.get("codEnabled") === "on";
+    await patchSettings((s) => ({ ...s, checkout: { freeShippingThreshold: threshold, codEnabled } }));
+    return ok(null);
+  });
+}
+
+export async function updateHomepageSections(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    let raw: unknown;
+    try {
+      raw = JSON.parse(String(formData.get("sections") ?? "[]"));
+    } catch {
+      return fail("Could not read the sections.");
+    }
+    const parsed = z.array(homepageSectionSchema).max(12).safeParse(raw);
+    if (!parsed.success) return failFromZod(parsed.error);
+    await patchSettings((s) => ({ ...s, homepage: { sections: parsed.data } }));
     return ok(null);
   });
 }

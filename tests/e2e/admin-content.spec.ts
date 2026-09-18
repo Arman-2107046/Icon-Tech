@@ -96,3 +96,42 @@ test("menus: create menu, nested items, reorder, delete", async ({ page }) => {
   await menu.getByRole("button", { name: `Delete menu E2E Menu ${stamp}` }).click();
   await expect(page.getByTestId("menu").filter({ hasText: `E2E Menu ${stamp}` })).toHaveCount(0);
 });
+
+test("settings: store info, checkout, and homepage section order persist", async ({ page }) => {
+  await login(page);
+  await page.goto("/admin/settings");
+
+  // Store info with an invalid email is rejected on the field; then saved.
+  const tagline = `Tagline ${Date.now().toString(36)}`;
+  await page.getByRole("textbox", { name: "Tagline" }).fill(tagline);
+  await page.getByRole("textbox", { name: "Contact email" }).fill("nope");
+  await page.getByRole("button", { name: "Save store" }).click();
+  await expect(page.getByText("Enter a valid email")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Tagline" })).toHaveValue(tagline);
+  await page.getByRole("textbox", { name: "Contact email" }).fill("hello@icontech.com.bd");
+  await page.getByRole("button", { name: "Save store" }).click();
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: "Tagline" })).toHaveValue(tagline);
+
+  // Checkout threshold.
+  await page.getByRole("textbox", { name: /Free-shipping banner threshold/ }).fill("7500");
+  await page.getByRole("button", { name: "Save checkout" }).click();
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: /Free-shipping banner threshold/ })).toHaveValue("7500.00");
+  await page.getByRole("textbox", { name: /Free-shipping banner threshold/ }).fill("5000");
+  await page.getByRole("button", { name: "Save checkout" }).click();
+
+  // Homepage sections: move the first section down and disable it.
+  const sections = page.getByTestId("homepage-section");
+  const firstType = await sections.nth(0).getAttribute("data-type");
+  await page.getByRole("button", { name: "Move section 1 down" }).click();
+  await expect(sections.nth(1)).toHaveAttribute("data-type", firstType ?? "");
+  await page.getByRole("button", { name: "Save sections" }).click();
+  await page.reload();
+  await expect(page.getByTestId("homepage-section").nth(1)).toHaveAttribute("data-type", firstType ?? "");
+  // Restore.
+  await page.getByRole("button", { name: "Move section 2 up" }).click();
+  await page.getByRole("button", { name: "Save sections" }).click();
+  await page.reload();
+  await expect(page.getByTestId("homepage-section").nth(0)).toHaveAttribute("data-type", firstType ?? "");
+});

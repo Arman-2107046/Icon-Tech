@@ -3,6 +3,7 @@ import "server-only";
 
 import type { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/src/lib/db";
+import { DEFAULT_SITE_SETTINGS, siteSettingsSchema, type SiteSettings } from "./types";
 
 // ---- pages ------------------------------------------------------------------
 
@@ -48,4 +49,13 @@ export function buildMenuTree(items: AdminMenuItem[]): MenuTreeItem[] {
   const ids = new Set(items.map((i) => i.id));
   const roots = items.filter((i) => !i.parentId || !ids.has(i.parentId));
   return roots.map((root) => ({ ...root, children: items.filter((i) => i.parentId === root.id) }));
+}
+
+// ---- site settings ----------------------------------------------------------
+
+/** The single settings row, validated and merged with defaults. */
+export async function getSiteSettings(): Promise<SiteSettings> {
+  const row = await db.siteSettings.findUnique({ where: { id: "default" } });
+  const parsed = siteSettingsSchema.safeParse(row?.data ?? {});
+  return parsed.success ? parsed.data : DEFAULT_SITE_SETTINGS;
 }
