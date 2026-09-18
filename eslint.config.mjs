@@ -43,6 +43,11 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Unit tests exercise module internals directly.
+    files: ["tests/**/*.ts"],
+    rules: { "no-restricted-imports": "off" },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

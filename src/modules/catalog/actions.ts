@@ -7,7 +7,8 @@ import { type ActionResult, fail, failFromZod, ok, runAction } from "@/src/lib/a
 import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
-import { productInputSchema, slugify } from "./types";
+import { cleanOptions, combinations, planVariants } from "./matrix";
+import { MAX_VARIANTS, optionsInputSchema, productInputSchema, slugify } from "./types";
 
 function readProductForm(formData: FormData) {
   const title = String(formData.get("title") ?? "");
@@ -62,5 +63,105 @@ export async function archiveProduct(id: string): Promise<ActionResult<null>> {
     await assertAdmin();
     await db.product.update({ where: { id }, data: { status: "ARCHIVED" } });
     return ok(null);
+  });
+}
+
+// ---- options / variant matrix -----------------------------------------------
+
+/**
+ * Replace the product's option set and regenerate its variants. Variants
+ * whose option-value selection still exists keep their id, price, SKU and
+ * inventory; new combinations are created at the product's lowest current
+ * price with zero stock; orphaned combinations are deleted.
+ */
+export async function saveProductOptions(productId: string, _prev: ActionResult<{ created: number; removed: number }> | null, formData: FormData): Promise<ActionResult<{ created: number; removed: number }>> {
+  return runAction(async () => {
+    await assertAdmin();
+
+    let raw: unknown;
+    try {
+      raw = JSON.parse(String(formData.get("options") ?? "[]"));
+    } catch {
+      return fail("Could not read the options.");
+    }
+    const parsed = optionsInputSchema.safeParse(raw);
+    if (!parsed.success) return failFromZod(parsed.error);
+    const options = cleanOptions(parsed.data);
+
+    const comboCount = combinations(options).length;
+    if (comboCount > MAX_VARIANTS) {
+      return fail(`That would create ${comboCount} variants; the limit is ${MAX_VARIANTS}.`);
+    }
+
+    const product = await db.product.findUnique({
+      where: { id: productId },
+      include: {
+        options: { include: { values: true } },
+        variants: { include: { optionValues: { include: { optionValue: { include: { option: true } } } } } },
+      },
+    });
+    if (!product) return fail("Product not found.");
+
+    const existing = product.variants.map((v) => ({
+      data: v,
+      selection: Object.fromEntries(v.optionValues.map((ov) => [ov.optionValue.option.name, ov.optionValue.value])),
+    }));
+    const plan = planVariants(options, existing);
+    const basePrice = product.variants.length ? Math.min(...product.variants.map((v) => v.price)) : 0;
+
+    await db.$transaction(async (tx) => {
+      // 1. Rebuild the option tree. Deleting an option cascades to its values
+      //    and their variant links, which is fine: links are re-created below.
+      await tx.productOption.deleteMany({ where: { productId } });
+      const valueIds = new Map<string, string>();
+      for (const [oi, option] of options.entries()) {
+        const created = await tx.productOption.create({
+          data: {
+            productId,
+            name: option.name,
+            position: oi,
+            values: { create: option.values.map((v, vi) => ({ value: v.value, position: vi })) },
+          },
+          include: { values: true },
+        });
+        for (const v of created.values) valueIds.set(`${option.name}::${v.value}`, v.id);
+      }
+
+      const linksFor = (selection: Record<string, string>) =>
+        Object.entries(selection).map(([name, value]) => {
+          const optionValueId = valueIds.get(`${name}::${value}`);
+          if (!optionValueId) throw new Error(`Missing option value ${name}=${value}`);
+          return { optionValueId };
+        });
+
+      // 2. Remove orphans first so a kept variant can take a freed position.
+      if (plan.remove.length) {
+        await tx.variant.deleteMany({ where: { id: { in: plan.remove.map((v) => v.id) } } });
+      }
+
+      // 3. Retitle/relink survivors.
+      for (const k of plan.keep) {
+        await tx.variant.update({
+          where: { id: k.data.id },
+          data: { title: k.title, position: k.position, optionValues: { create: linksFor(k.selection) } },
+        });
+      }
+
+      // 4. Create the new combinations.
+      for (const c of plan.create) {
+        await tx.variant.create({
+          data: {
+            productId,
+            title: c.title,
+            position: c.position,
+            price: basePrice,
+            optionValues: { create: linksFor(c.selection) },
+            inventory: { create: { available: 0, reserved: 0 } },
+          },
+        });
+      }
+    });
+
+    return ok({ created: plan.create.length, removed: plan.remove.length });
   });
 }

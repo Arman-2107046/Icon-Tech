@@ -55,8 +55,25 @@ export function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 120);
 }
+
+// ---- options / variant matrix -----------------------------------------------
+
+export const optionsInputSchema = z
+  .array(
+    z.object({
+      id: z.string().optional(),
+      name: z.string().max(60, "Option names are limited to 60 characters"),
+      values: z.array(z.object({ id: z.string().optional(), value: z.string().max(80, "Values are limited to 80 characters") })),
+    }),
+  )
+  .max(3, "A product can have at most 3 options");
+
+export type OptionsInput = z.infer<typeof optionsInputSchema>;
+
+/** Hard cap so a typo in the builder cannot create thousands of rows. */
+export const MAX_VARIANTS = 100;
