@@ -1,2 +1,54 @@
 // checkout module schema. Models for this module live here.
 // Merged with the other files in prisma/schema/ by Prisma.
+
+/// A group of countries that share shipping rates. A country appears in at
+/// most one zone; the checkout resolves the zone from the shipping address.
+model ShippingZone {
+  id        String   @id @default(cuid())
+  name      String
+  /// ISO 3166-1 alpha-2 codes, e.g. ["BD"].
+  countries String[] @default([])
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rates ShippingRate[]
+
+  @@index([position])
+  @@map("shipping_zones")
+}
+
+/// A rate offered within a zone. `price` is integer minor units. The
+/// optional min/max bound the order subtotal the rate applies to, so a
+/// zone can offer "Standard" under a threshold and "Free" above it.
+model ShippingRate {
+  id               String   @id @default(cuid())
+  zoneId           String   @map("zone_id")
+  name             String
+  price            Int
+  minOrderSubtotal Int?     @map("min_order_subtotal")
+  maxOrderSubtotal Int?     @map("max_order_subtotal")
+  position         Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  zone ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId, position])
+  @@map("shipping_rates")
+}
+
+/// Tax as basis points (1500 = 15%). Matching prefers a country+region row,
+/// then the country-wide row where `region` is null.
+model TaxRate {
+  id        String   @id @default(cuid())
+  name      String
+  country   String   @db.Char(2)
+  region    String?
+  rateBps   Int      @map("rate_bps")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([country, region])
+  @@map("tax_rates")
+}
