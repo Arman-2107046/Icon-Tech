@@ -125,3 +125,71 @@ export async function listMedia(ownerType: "PRODUCT" | "VARIANT" | "COLLECTION" 
 }
 
 export type MediaItem = Awaited<ReturnType<typeof listMedia>>[number];
+
+// ---- admin: collections -----------------------------------------------------
+
+export type AdminCollectionListParams = {
+  q: string;
+  type?: "MANUAL" | "RULE";
+  sort: "title" | "updatedAt" | "type";
+  dir: "asc" | "desc";
+  skip: number;
+  take: number;
+};
+
+export async function listCollectionsForAdmin(params: AdminCollectionListParams) {
+  const where: Prisma.CollectionWhereInput = {
+    ...(params.q ? { OR: [{ title: { contains: params.q, mode: "insensitive" } }, { handle: { contains: params.q, mode: "insensitive" } }] } : {}),
+    ...(params.type ? { type: params.type } : {}),
+  };
+  const [rows, total] = await Promise.all([
+    db.collection.findMany({
+      where,
+      orderBy: { [params.sort]: params.dir },
+      skip: params.skip,
+      take: params.take,
+      select: { id: true, handle: true, title: true, type: true, updatedAt: true, imageUrl: true, _count: { select: { products: true } } },
+    }),
+    db.collection.count({ where }),
+  ]);
+  return { rows, total };
+}
+
+export type AdminCollectionRow = Awaited<ReturnType<typeof listCollectionsForAdmin>>["rows"][number];
+
+export async function getCollectionForAdmin(id: string) {
+  return db.collection.findUnique({
+    where: { id },
+    include: {
+      products: {
+        orderBy: { position: "asc" },
+        include: { product: { select: { id: true, title: true, handle: true, status: true } } },
+      },
+    },
+  });
+}
+
+export type AdminCollection = NonNullable<Awaited<ReturnType<typeof getCollectionForAdmin>>>;
+
+/** Products matching a search, for the collection picker. */
+export async function searchProductsBrief(q: string, excludeIds: string[] = [], take = 10) {
+  return db.product.findMany({
+    where: {
+      id: { notIn: excludeIds },
+      ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" } }, { handle: { contains: q, mode: "insensitive" } }] } : {}),
+    },
+    orderBy: { title: "asc" },
+    take,
+    select: { id: true, title: true, handle: true, status: true },
+  });
+}
+
+/** Cover image URL for each product id (position 0 media). */
+export async function coverImagesFor(productIds: string[]): Promise<Map<string, string>> {
+  if (productIds.length === 0) return new Map();
+  const media = await db.media.findMany({
+    where: { ownerType: "PRODUCT", ownerId: { in: productIds }, position: 0 },
+    select: { ownerId: true, url: true },
+  });
+  return new Map(media.map((m) => [m.ownerId, m.url]));
+}

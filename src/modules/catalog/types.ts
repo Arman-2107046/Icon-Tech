@@ -118,3 +118,26 @@ export const mediaMetaSchema = z.object({
 });
 
 export const mediaAltSchema = z.object({ alt: z.string().trim().max(200, "Alt text is limited to 200 characters") });
+
+// ---- collections ------------------------------------------------------------
+
+export const COLLECTION_TYPES = ["MANUAL", "RULE"] as const;
+
+export const collectionInputSchema = z.object({
+  title: z.string().trim().min(2, "Title needs at least 2 characters").max(120),
+  handle: handleSchema,
+  description: z.string().default(""),
+  type: z.enum(COLLECTION_TYPES, { message: "Pick a type" }),
+  seoTitle: z
+    .string()
+    .trim()
+    .max(70, "Keep SEO titles under 70 characters")
+    .transform((v) => (v === "" ? null : v)),
+  seoDescription: z
+    .string()
+    .trim()
+    .max(160, "Keep SEO descriptions under 160 characters")
+    .transform((v) => (v === "" ? null : v)),
+});
+
+export type CollectionInput = z.infer<typeof collectionInputSchema>;

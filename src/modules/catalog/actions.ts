@@ -10,7 +10,8 @@ import { isUniqueViolation } from "@/src/lib/db-errors";
 import { cleanOptions, combinations, planVariants } from "./matrix";
 import { fromMajorUnits } from "@/src/lib/money";
 import { deleteUpload } from "@/src/lib/storage";
-import { MAX_VARIANTS, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
+import { coverImagesFor, searchProductsBrief } from "./queries";
+import { MAX_VARIANTS, collectionInputSchema, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
 
 function readProductForm(formData: FormData) {
   const title = String(formData.get("title") ?? "");
@@ -251,5 +252,117 @@ export async function reorderMedia(ownerType: "PRODUCT" | "VARIANT" | "COLLECTIO
     }
     await db.$transaction(orderedIds.map((id, position) => db.media.update({ where: { id }, data: { position } })));
     return ok(null);
+  });
+}
+
+// ---- collections ------------------------------------------------------------
+
+function readCollectionForm(formData: FormData) {
+  const title = String(formData.get("title") ?? "");
+  const handleRaw = String(formData.get("handle") ?? "").trim();
+  return collectionInputSchema.safeParse({
+    title,
+    handle: handleRaw === "" ? slugify(title) : handleRaw,
+    description: formData.get("description") ?? "",
+    type: formData.get("type"),
+    seoTitle: formData.get("seoTitle") ?? "",
+    seoDescription: formData.get("seoDescription") ?? "",
+  });
+}
+
+export async function createCollection(_prev: ActionResult<{ id: string }> | null, formData: FormData): Promise<ActionResult<{ id: string }>> {
+  const result = await runAction<{ id: string }>(async () => {
+    await assertAdmin();
+    const parsed = readCollectionForm(formData);
+    if (!parsed.success) return failFromZod(parsed.error);
+    try {
+      const created = await db.collection.create({ data: parsed.data, select: { id: true } });
+      return ok({ id: created.id });
+    } catch (error) {
+      if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", { handle: "This handle is already taken" });
+      throw error;
+    }
+  });
+  if (result.ok) redirect(`/admin/collections/${result.data.id}`);
+  return result;
+}
+
+export async function updateCollection(id: string, _prev: ActionResult<{ id: string }> | null, formData: FormData): Promise<ActionResult<{ id: string }>> {
+  return runAction<{ id: string }>(async () => {
+    await assertAdmin();
+    const parsed = readCollectionForm(formData);
+    if (!parsed.success) return failFromZod(parsed.error);
+    try {
+      await db.collection.update({ where: { id }, data: parsed.data });
+      return ok({ id });
+    } catch (error) {
+      if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", { handle: "This handle is already taken" });
+      throw error;
+    }
+  });
+}
+
+export async function deleteCollection(id: string): Promise<ActionResult<null>> {
+  const result = await runAction<null>(async () => {
+    await assertAdmin();
+    await db.collection.delete({ where: { id } });
+    return ok(null);
+  });
+  if (result.ok) redirect("/admin/collections");
+  return result;
+}
+
+export async function addProductToCollection(collectionId: string, productId: string): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const position = await db.collectionProduct.count({ where: { collectionId } });
+    await db.collectionProduct.upsert({
+      where: { collectionId_productId: { collectionId, productId } },
+      create: { collectionId, productId, position },
+      update: {},
+    });
+    return ok(null);
+  });
+}
+
+export async function removeProductFromCollection(collectionId: string, productId: string): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    await db.$transaction(async (tx) => {
+      const row = await tx.collectionProduct.findUnique({ where: { collectionId_productId: { collectionId, productId } } });
+      if (!row) return;
+      await tx.collectionProduct.delete({ where: { collectionId_productId: { collectionId, productId } } });
+      await tx.collectionProduct.updateMany({ where: { collectionId, position: { gt: row.position } }, data: { position: { decrement: 1 } } });
+    });
+    return ok(null);
+  });
+}
+
+export async function reorderCollectionProducts(collectionId: string, orderedProductIds: string[]): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const current = await db.collectionProduct.findMany({ where: { collectionId }, select: { productId: true } });
+    const ids = new Set(current.map((c) => c.productId));
+    if (orderedProductIds.length !== ids.size || !orderedProductIds.every((id) => ids.has(id)) || new Set(orderedProductIds).size !== orderedProductIds.length) {
+      return fail("The product list changed; reload and try again.");
+    }
+    await db.$transaction(
+      orderedProductIds.map((productId, position) =>
+        db.collectionProduct.update({ where: { collectionId_productId: { collectionId, productId } }, data: { position } }),
+      ),
+    );
+    return ok(null);
+  });
+}
+
+export type PickerProduct = { id: string; title: string; handle: string; status: string; imageUrl: string | null };
+
+/** Picker search is an action so the client can call it without a route. */
+export async function searchProductsForPicker(q: string, excludeIds: string[]): Promise<ActionResult<PickerProduct[]>> {
+  return runAction<PickerProduct[]>(async () => {
+    await assertAdmin();
+    const products = await searchProductsBrief(q, excludeIds);
+    const covers = await coverImagesFor(products.map((p) => p.id));
+    return ok(products.map((p) => ({ ...p, imageUrl: covers.get(p.id) ?? null })));
   });
 }
