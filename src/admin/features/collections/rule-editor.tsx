@@ -53,12 +53,16 @@ export function RuleEditor({ collectionId, initial }: { collectionId: string; in
   const rules: CollectionRules = { match, conditions: rows.map(({ field, operator, value }) => ({ field, operator, value })) };
   const json = JSON.stringify(rules);
 
-  // Live preview, debounced; runs on every edit and once on mount.
+  // Live preview, debounced; runs on every edit and once on mount. Responses
+  // can arrive out of order, so only the latest request may update state.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSeq = useRef(0);
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
+      const seq = ++requestSeq.current;
       const result = await previewCollectionRules(JSON.parse(json));
+      if (seq !== requestSeq.current) return;
       if (result.ok) {
         setPreview(result.data);
         setPreviewError(null);

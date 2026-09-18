@@ -2,10 +2,12 @@
 
 // content module — Server Actions. Every action returns an ActionResult; never throws.
 
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { type ActionResult, fail, failFromZod, ok, runAction } from "@/src/lib/action-result";
 import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
+import { tags } from "@/src/lib/cache-tags";
 import { isUniqueViolation } from "@/src/lib/db-errors";
 import { z } from "zod";
 import { fromMajorUnits } from "@/src/lib/money";
@@ -37,6 +39,8 @@ export async function createPage(_prev: ActionResult<{ id: string }> | null, for
     const { published, ...data } = parsed.data;
     try {
       const page = await db.page.create({ data: { ...data, publishedAt: published ? new Date() : null }, select: { id: true } });
+      updateTag(tags.page(data.handle));
+      updateTag(tags.pages);
       return ok({ id: page.id });
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", HANDLE_TAKEN);
@@ -54,11 +58,14 @@ export async function updatePage(id: string, _prev: ActionResult<{ id: string }>
     if (!parsed.success) return failFromZod(parsed.error);
     const { published, ...data } = parsed.data;
     try {
-      const existing = await db.page.findUnique({ where: { id }, select: { publishedAt: true } });
+      const existing = await db.page.findUnique({ where: { id }, select: { publishedAt: true, handle: true } });
       if (!existing) return fail("Page not found.");
       // Keep the original publish date when it stays published.
       const publishedAt = published ? (existing.publishedAt ?? new Date()) : null;
       await db.page.update({ where: { id }, data: { ...data, publishedAt } });
+      updateTag(tags.page(data.handle));
+      if (existing.handle !== data.handle) updateTag(tags.page(existing.handle));
+      updateTag(tags.pages);
       return ok({ id });
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", HANDLE_TAKEN);
@@ -70,7 +77,9 @@ export async function updatePage(id: string, _prev: ActionResult<{ id: string }>
 export async function deletePage(id: string): Promise<ActionResult<null>> {
   const result = await runAction<null>(async () => {
     await assertAdmin();
-    await db.page.delete({ where: { id } });
+    const deleted = await db.page.delete({ where: { id } });
+    updateTag(tags.page(deleted.handle));
+    updateTag(tags.pages);
     return ok(null);
   });
   if (result.ok) redirect("/admin/pages");
@@ -88,6 +97,8 @@ export async function createMenu(_prev: ActionResult<null> | null, formData: For
     if (!parsed.success) return failFromZod(parsed.error);
     try {
       await db.menu.create({ data: parsed.data });
+      updateTag(tags.menu(parsed.data.handle));
+      updateTag(tags.menus);
       return ok(null);
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", HANDLE_TAKEN);
@@ -102,7 +113,11 @@ export async function updateMenu(menuId: string, _prev: ActionResult<null> | nul
     const parsed = menuInputSchema.safeParse({ title: formData.get("title") ?? "", handle: formData.get("handle") ?? "" });
     if (!parsed.success) return failFromZod(parsed.error);
     try {
+      const before = await db.menu.findUnique({ where: { id: menuId }, select: { handle: true } });
       await db.menu.update({ where: { id: menuId }, data: parsed.data });
+      updateTag(tags.menu(parsed.data.handle));
+      if (before && before.handle !== parsed.data.handle) updateTag(tags.menu(before.handle));
+      updateTag(tags.menus);
       return ok(null);
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", HANDLE_TAKEN);
@@ -114,9 +129,17 @@ export async function updateMenu(menuId: string, _prev: ActionResult<null> | nul
 export async function deleteMenu(menuId: string): Promise<ActionResult<null>> {
   return runAction<null>(async () => {
     await assertAdmin();
-    await db.menu.delete({ where: { id: menuId } });
+    const deleted = await db.menu.delete({ where: { id: menuId } });
+    updateTag(tags.menu(deleted.handle));
+    updateTag(tags.menus);
     return ok(null);
   });
+}
+
+async function expireMenu(menuId: string): Promise<void> {
+  const menu = await db.menu.findUnique({ where: { id: menuId }, select: { handle: true } });
+  if (menu) updateTag(tags.menu(menu.handle));
+  updateTag(tags.menus);
 }
 
 function readMenuItem(formData: FormData) {
@@ -139,6 +162,7 @@ export async function createMenuItem(menuId: string, _prev: ActionResult<null> |
     if (!(await validParent(menuId, parsed.data.parentId))) return fail("Please fix the highlighted fields.", { parentId: "Pick a top-level item of this menu" });
     const position = await db.menuItem.count({ where: { menuId, parentId: parsed.data.parentId } });
     await db.menuItem.create({ data: { ...parsed.data, menuId, position } });
+    await expireMenu(menuId);
     return ok(null);
   });
 }
@@ -162,6 +186,7 @@ export async function updateMenuItem(itemId: string, _prev: ActionResult<null> |
         await tx.menuItem.updateMany({ where: { menuId: item.menuId, parentId: item.parentId, position: { gt: item.position } }, data: { position: { decrement: 1 } } });
       }
     });
+    await expireMenu(item.menuId);
     return ok(null);
   });
 }
@@ -175,6 +200,7 @@ export async function deleteMenuItem(itemId: string): Promise<ActionResult<null>
       await tx.menuItem.delete({ where: { id: itemId } }); // children cascade
       await tx.menuItem.updateMany({ where: { menuId: item.menuId, parentId: item.parentId, position: { gt: item.position } }, data: { position: { decrement: 1 } } });
     });
+    await expireMenu(item.menuId);
     return ok(null);
   });
 }
@@ -193,6 +219,7 @@ export async function moveMenuItem(itemId: string, direction: "up" | "down"): Pr
       db.menuItem.update({ where: { id: item.id }, data: { position: swapWith.position } }),
       db.menuItem.update({ where: { id: swapWith.id }, data: { position: item.position } }),
     ]);
+    await expireMenu(item.menuId);
     return ok(null);
   });
 }
@@ -203,6 +230,7 @@ async function patchSettings(patch: (current: SiteSettings) => SiteSettings): Pr
   const current = await getSiteSettings();
   const next = siteSettingsSchema.parse(patch(current));
   await db.siteSettings.upsert({ where: { id: "default" }, create: { id: "default", data: next }, update: { data: next } });
+  updateTag(tags.settings);
 }
 
 export async function updateStoreSettings(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {

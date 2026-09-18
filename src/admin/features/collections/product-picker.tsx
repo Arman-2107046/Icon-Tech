@@ -65,10 +65,14 @@ export function ProductPicker({ collectionId, products }: { collectionId: string
     }, 250);
   };
 
+  // Mutations are serialised so a quick second action never races the first.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     startTransition(async () => {
       setError(null);
-      const result = await fn();
+      const job = queue.current.then(fn);
+      queue.current = job.catch(() => undefined);
+      const result = await job;
       if (!result.ok) setError(result.error ?? "Something went wrong.");
       router.refresh();
     });

@@ -5,3 +5,4 @@ export * from "./actions";
 export * from "./types";
 export { selectionKey, combinations, planVariants, cleanOptions } from "./matrix";
 export { rulesToWhere } from "./rules";
+export * from "./storefront";

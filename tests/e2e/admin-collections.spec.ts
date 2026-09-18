@@ -1,12 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-
-async function login(page: Page) {
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@icontech.com.bd");
-  await page.getByLabel("Password").fill("admin12345");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/admin$/);
-}
+import { expect, test } from "@playwright/test";
+import { actAndWait, login, submitAndWait } from "./helpers";
 
 test("manual collection: create, add products, reorder, remove, delete", async ({ page }) => {
   await login(page);
@@ -37,15 +30,16 @@ test("manual collection: create, add products, reorder, remove, delete", async (
   await search.fill("");
 
   // Reorder via drag, then verify it persisted.
-  await rows.nth(1).dragTo(rows.nth(0));
+  await actAndWait(page, () => rows.nth(1).dragTo(rows.nth(0)));
   await expect(rows.nth(0)).toContainText("Aria Buds Pro");
+  await expect(page.getByRole("button", { name: "Move Aria Buds Pro down" })).toBeEnabled();
   await page.reload();
   await expect(page.getByTestId("collection-products").locator("li").nth(0)).toContainText("Aria Buds Pro");
 
   // Remove one; the list shows it in the admin table count.
   await page.getByRole("button", { name: "Remove Volt GaN Charger" }).click();
   await expect(page.getByTestId("collection-products").locator("li")).toHaveCount(1);
-  await page.goto(`/admin/collections?q=e2e-picks-${stamp}`);
+  await page.goto(`/admin/collections?q=e2e-picks-${stamp}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("tbody tr").first()).toContainText("1");
 
   // Delete.
@@ -54,7 +48,7 @@ test("manual collection: create, add products, reorder, remove, delete", async (
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete" }).click();
   await page.waitForURL(/\/admin\/collections$/);
-  await page.goto(`/admin/collections?q=e2e-picks-${stamp}`);
+  await page.goto(`/admin/collections?q=e2e-picks-${stamp}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText("No collections match.")).toBeVisible();
 });
 
@@ -72,7 +66,10 @@ test("rule collection: preview, edit, save, and products-list filter resolve rul
   };
 
   // Seeded rule: tag is "audio". Other specs may have added audio-tagged
-  // products, so assert relative to the current count.
+  // products, so assert relative to the current count. Force "all" in case
+  // an earlier run left the collection on "any".
+  await page.getByRole("combobox", { name: "Match mode" }).click();
+  await page.getByRole("option", { name: "all conditions" }).click();
   await expect(preview).toContainText(/\d+ matching products/);
   await expect(preview).toContainText("Aria Active Noise-Cancelling Headphones");
   const all = await count();
@@ -96,7 +93,7 @@ test("rule collection: preview, edit, save, and products-list filter resolve rul
   await page.getByRole("button", { name: "Remove condition 2" }).click();
   await expect.poll(count).toBe(all);
 
-  await page.getByRole("button", { name: "Save conditions" }).click();
+  await submitAndWait(page, page.getByRole("button", { name: "Save conditions" }));
   await page.reload();
   await expect.poll(count).toBe(all);
 

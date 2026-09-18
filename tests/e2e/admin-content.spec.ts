@@ -1,12 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-
-async function login(page: Page) {
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@icontech.com.bd");
-  await page.getByLabel("Password").fill("admin12345");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/admin$/);
-}
+import { expect, test } from "@playwright/test";
+import { login, submitAndWait } from "./helpers";
 
 test("pages: create as draft, publish, duplicate handle, delete", async ({ page }) => {
   await login(page);
@@ -20,7 +13,7 @@ test("pages: create as draft, publish, duplicate handle, delete", async ({ page 
   await expect(page.getByRole("checkbox", { name: "Published" })).not.toBeChecked();
 
   await page.getByRole("checkbox", { name: "Published" }).click();
-  await page.getByRole("button", { name: "Save changes" }).click();
+  await submitAndWait(page, page.getByRole("button", { name: "Save changes" }));
   await page.reload();
   await expect(page.getByRole("checkbox", { name: "Published" })).toBeChecked();
   await expect(page.getByRole("textbox", { name: "Body" })).toHaveValue("## Hello\n\nSome **markdown**.");
@@ -31,14 +24,14 @@ test("pages: create as draft, publish, duplicate handle, delete", async ({ page 
   await page.getByRole("button", { name: "Create page" }).click();
   await expect(page.getByText("This handle is already taken")).toBeVisible();
 
-  await page.goto(`/admin/pages?q=e2e-page-${stamp}`);
+  await page.goto(`/admin/pages?q=e2e-page-${stamp}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("tbody tr").first()).toContainText("Published");
   await page.locator("tbody tr").first().getByRole("link").first().click();
   await page.waitForURL(/\/admin\/pages\/[a-z0-9]+$/);
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Delete" }).click();
   await page.waitForURL(/\/admin\/pages$/);
-  await page.goto(`/admin/pages?q=e2e-page-${stamp}`);
+  await page.goto(`/admin/pages?q=e2e-page-${stamp}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText("No pages match.")).toBeVisible();
 });
 
@@ -109,13 +102,13 @@ test("settings: store info, checkout, and homepage section order persist", async
   await expect(page.getByText("Enter a valid email")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Tagline" })).toHaveValue(tagline);
   await page.getByRole("textbox", { name: "Contact email" }).fill("hello@icontech.com.bd");
-  await page.getByRole("button", { name: "Save store" }).click();
+  await submitAndWait(page, page.getByRole("button", { name: "Save store" }));
   await page.reload();
   await expect(page.getByRole("textbox", { name: "Tagline" })).toHaveValue(tagline);
 
   // Checkout threshold.
   await page.getByRole("textbox", { name: /Free-shipping banner threshold/ }).fill("7500");
-  await page.getByRole("button", { name: "Save checkout" }).click();
+  await submitAndWait(page, page.getByRole("button", { name: "Save checkout" }));
   await page.reload();
   await expect(page.getByRole("textbox", { name: /Free-shipping banner threshold/ })).toHaveValue("7500.00");
   await page.getByRole("textbox", { name: /Free-shipping banner threshold/ }).fill("5000");
@@ -126,12 +119,12 @@ test("settings: store info, checkout, and homepage section order persist", async
   const firstType = await sections.nth(0).getAttribute("data-type");
   await page.getByRole("button", { name: "Move section 1 down" }).click();
   await expect(sections.nth(1)).toHaveAttribute("data-type", firstType ?? "");
-  await page.getByRole("button", { name: "Save sections" }).click();
+  await submitAndWait(page, page.getByRole("button", { name: "Save sections" }));
   await page.reload();
   await expect(page.getByTestId("homepage-section").nth(1)).toHaveAttribute("data-type", firstType ?? "");
   // Restore.
   await page.getByRole("button", { name: "Move section 2 up" }).click();
-  await page.getByRole("button", { name: "Save sections" }).click();
+  await submitAndWait(page, page.getByRole("button", { name: "Save sections" }));
   await page.reload();
   await expect(page.getByTestId("homepage-section").nth(0)).toHaveAttribute("data-type", firstType ?? "");
 });

@@ -2,7 +2,9 @@
 
 // checkout module — Server Actions. Every action returns an ActionResult; never throws.
 
+import { updateTag } from "next/cache";
 import { type ActionResult, fail, failFromZod, ok, runAction } from "@/src/lib/action-result";
+import { tags } from "@/src/lib/cache-tags";
 import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
@@ -34,6 +36,7 @@ export async function createShippingZone(_prev: ActionResult<null> | null, formD
     if (clash) return fail("Please fix the highlighted fields.", { countries: clash });
     const position = await db.shippingZone.count();
     await db.shippingZone.create({ data: { ...parsed.data, position } });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }
@@ -46,6 +49,7 @@ export async function updateShippingZone(zoneId: string, _prev: ActionResult<nul
     const clash = await countryClash(parsed.data.countries, zoneId);
     if (clash) return fail("Please fix the highlighted fields.", { countries: clash });
     await db.shippingZone.update({ where: { id: zoneId }, data: parsed.data });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }
@@ -54,6 +58,7 @@ export async function deleteShippingZone(zoneId: string): Promise<ActionResult<n
   return runAction<null>(async () => {
     await assertAdmin();
     await db.shippingZone.delete({ where: { id: zoneId } });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }
@@ -83,6 +88,7 @@ export async function createShippingRate(zoneId: string, _prev: ActionResult<nul
     if (!read.ok) return read.error ? failFromZod(read.error) : fail("Please fix the highlighted fields.", read.fieldErrors);
     const position = await db.shippingRate.count({ where: { zoneId } });
     await db.shippingRate.create({ data: { ...read.data, zoneId, position } });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }
@@ -93,6 +99,7 @@ export async function updateShippingRate(rateId: string, _prev: ActionResult<nul
     const read = readRate(formData);
     if (!read.ok) return read.error ? failFromZod(read.error) : fail("Please fix the highlighted fields.", read.fieldErrors);
     await db.shippingRate.update({ where: { id: rateId }, data: read.data });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }
@@ -101,6 +108,7 @@ export async function deleteShippingRate(rateId: string): Promise<ActionResult<n
   return runAction<null>(async () => {
     await assertAdmin();
     await db.shippingRate.delete({ where: { id: rateId } });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }
@@ -139,7 +147,8 @@ export async function createTaxRate(_prev: ActionResult<null> | null, formData: 
     if (await taxRateExists(rest.country, rest.region)) return fail("Please fix the highlighted fields.", { region: DUPLICATE_TAX });
     try {
       await db.taxRate.create({ data: { ...rest, rateBps: Math.round(Number(rate) * 100) } });
-      return ok(null);
+      updateTag(tags.shipping);
+    return ok(null);
     } catch (error) {
       if (isUniqueViolation(error, "country")) return fail("Please fix the highlighted fields.", { region: DUPLICATE_TAX });
       throw error;
@@ -156,7 +165,8 @@ export async function updateTaxRate(taxRateId: string, _prev: ActionResult<null>
     if (await taxRateExists(rest.country, rest.region, taxRateId)) return fail("Please fix the highlighted fields.", { region: DUPLICATE_TAX });
     try {
       await db.taxRate.update({ where: { id: taxRateId }, data: { ...rest, rateBps: Math.round(Number(rate) * 100) } });
-      return ok(null);
+      updateTag(tags.shipping);
+    return ok(null);
     } catch (error) {
       if (isUniqueViolation(error, "country")) return fail("Please fix the highlighted fields.", { region: DUPLICATE_TAX });
       throw error;
@@ -168,6 +178,7 @@ export async function deleteTaxRate(taxRateId: string): Promise<ActionResult<nul
   return runAction<null>(async () => {
     await assertAdmin();
     await db.taxRate.delete({ where: { id: taxRateId } });
+    updateTag(tags.shipping);
     return ok(null);
   });
 }

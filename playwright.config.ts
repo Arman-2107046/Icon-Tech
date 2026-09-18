@@ -9,6 +9,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // A single dev server backs the suite locally; more workers just contend.
+  workers: process.env.CI ? undefined : 2,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,

@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCustomerSession } from "@/src/lib/auth/session";
 
+// Session-gated: never prerendered as an instant shell (dev-only validation).
+export const instant = false;
+
 export const metadata: Metadata = { title: "Sign in" };
 
 /** Placeholder until the magic-link flow lands (item 101). */

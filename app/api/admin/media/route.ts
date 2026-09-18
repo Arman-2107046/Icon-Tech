@@ -1,6 +1,8 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/src/lib/auth/session";
 import { db } from "@/src/lib/db";
+import { collectionChangedTags, productChangedTags, tags } from "@/src/lib/cache-tags";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES, saveUpload } from "@/src/lib/storage";
 import { mediaMetaSchema } from "@/src/modules/catalog";
 
@@ -48,6 +50,19 @@ export async function POST(request: Request): Promise<Response> {
       position,
     },
   });
+
+  // Route handlers cannot call updateTag; stale-while-revalidate is fine here.
+  const expired: string[] = [];
+  if (meta.data.ownerType === "PRODUCT") {
+    const product = await db.product.findUnique({ where: { id: meta.data.ownerId }, select: { id: true, handle: true } });
+    if (product) expired.push(...productChangedTags(product));
+  } else if (meta.data.ownerType === "COLLECTION") {
+    const collection = await db.collection.findUnique({ where: { id: meta.data.ownerId }, select: { handle: true } });
+    if (collection) expired.push(...collectionChangedTags(collection.handle));
+  } else if (meta.data.ownerType === "PAGE") {
+    expired.push(tags.pages);
+  }
+  for (const tag of expired) revalidateTag(tag, "max");
 
   return NextResponse.json({ ok: true, data: media });
 }

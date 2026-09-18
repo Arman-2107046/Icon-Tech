@@ -1,12 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-
-async function login(page: Page) {
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@icontech.com.bd");
-  await page.getByLabel("Password").fill("admin12345");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/admin$/);
-}
+import { expect, test } from "@playwright/test";
+import { login, submitAndWait } from "./helpers";
 
 test.describe("admin products", () => {
   test("create with auto handle, reject duplicate handle, edit", async ({ page }) => {
@@ -34,7 +27,7 @@ test.describe("admin products", () => {
     // Edit persists.
     await page.goto(editUrl);
     await page.getByRole("textbox", { name: "Vendor" }).fill("E2E Vendor");
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await submitAndWait(page, page.getByRole("button", { name: "Save changes" }));
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Vendor" })).toHaveValue("E2E Vendor");
 

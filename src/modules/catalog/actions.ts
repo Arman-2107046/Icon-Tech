@@ -2,10 +2,12 @@
 
 // catalog module — Server Actions. Every action returns an ActionResult; never throws.
 
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { type ActionResult, fail, failFromZod, ok, runAction } from "@/src/lib/action-result";
 import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
+import { collectionChangedTags, productChangedTags, tags } from "@/src/lib/cache-tags";
 import { isUniqueViolation } from "@/src/lib/db-errors";
 import { cleanOptions, combinations, planVariants } from "./matrix";
 import { fromMajorUnits } from "@/src/lib/money";
@@ -13,6 +15,22 @@ import { deleteUpload } from "@/src/lib/storage";
 import { coverImagesFor, previewRules, searchProductsBrief } from "./queries";
 import { collectionRulesSchema } from "./rules";
 import { MAX_VARIANTS, collectionInputSchema, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
+
+function expire(list: string[]): void {
+  for (const tag of list) updateTag(tag);
+}
+
+/** Expire a product's tags by id (looks up the handle for the handle tag). */
+async function expireProduct(productId: string, previousHandle?: string): Promise<void> {
+  const product = await db.product.findUnique({ where: { id: productId }, select: { id: true, handle: true } });
+  if (product) expire(productChangedTags(product));
+  if (previousHandle) updateTag(tags.productHandle(previousHandle));
+}
+
+async function expireCollection(collectionId: string): Promise<void> {
+  const c = await db.collection.findUnique({ where: { id: collectionId }, select: { handle: true } });
+  if (c) expire(collectionChangedTags(c.handle));
+}
 
 function readProductForm(formData: FormData) {
   const title = String(formData.get("title") ?? "");
@@ -35,7 +53,8 @@ export async function createProduct(_prev: ActionResult<{ id: string }> | null, 
     const parsed = readProductForm(formData);
     if (!parsed.success) return failFromZod(parsed.error);
     try {
-      const product = await db.product.create({ data: parsed.data, select: { id: true } });
+      const product = await db.product.create({ data: parsed.data, select: { id: true, handle: true } });
+      expire(productChangedTags(product));
       return ok({ id: product.id });
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", { handle: "This handle is already taken" });
@@ -52,7 +71,9 @@ export async function updateProduct(id: string, _prev: ActionResult<{ id: string
     const parsed = readProductForm(formData);
     if (!parsed.success) return failFromZod(parsed.error);
     try {
+      const before = await db.product.findUnique({ where: { id }, select: { handle: true } });
       await db.product.update({ where: { id }, data: parsed.data });
+      await expireProduct(id, before?.handle);
       return ok({ id });
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", { handle: "This handle is already taken" });
@@ -66,6 +87,7 @@ export async function archiveProduct(id: string): Promise<ActionResult<null>> {
   return runAction<null>(async () => {
     await assertAdmin();
     await db.product.update({ where: { id }, data: { status: "ARCHIVED" } });
+    await expireProduct(id);
     return ok(null);
   });
 }
@@ -166,6 +188,7 @@ export async function saveProductOptions(productId: string, _prev: ActionResult<
       }
     });
 
+    await expireProduct(productId);
     return ok({ created: plan.create.length, removed: plan.remove.length });
   });
 }
@@ -190,7 +213,7 @@ export async function updateVariant(variantId: string, _prev: ActionResult<null>
     }
 
     try {
-      await db.variant.update({
+      const updated = await db.variant.update({
         where: { id: variantId },
         data: {
           sku: parsed.data.sku,
@@ -204,6 +227,7 @@ export async function updateVariant(variantId: string, _prev: ActionResult<null>
           },
         },
       });
+      await expireProduct(updated.productId);
       return ok(null);
     } catch (error) {
       if (isUniqueViolation(error, "sku")) return fail("Please fix the highlighted fields.", { sku: "Another variant already uses this SKU" });
@@ -214,12 +238,19 @@ export async function updateVariant(variantId: string, _prev: ActionResult<null>
 
 // ---- media ------------------------------------------------------------------
 
+async function expireOwner(ownerType: "PRODUCT" | "VARIANT" | "COLLECTION" | "PAGE", ownerId: string): Promise<void> {
+  if (ownerType === "PRODUCT") await expireProduct(ownerId);
+  else if (ownerType === "COLLECTION") await expireCollection(ownerId);
+  else if (ownerType === "PAGE") updateTag(tags.pages);
+}
+
 export async function updateMediaAlt(mediaId: string, _prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
   return runAction<null>(async () => {
     await assertAdmin();
     const parsed = mediaAltSchema.safeParse({ alt: formData.get("alt") ?? "" });
     if (!parsed.success) return failFromZod(parsed.error);
-    await db.media.update({ where: { id: mediaId }, data: { alt: parsed.data.alt } });
+    const media = await db.media.update({ where: { id: mediaId }, data: { alt: parsed.data.alt } });
+    await expireOwner(media.ownerType, media.ownerId);
     return ok(null);
   });
 }
@@ -238,6 +269,7 @@ export async function deleteMedia(mediaId: string): Promise<ActionResult<null>> 
       });
     });
     await deleteUpload(media.url);
+    await expireOwner(media.ownerType, media.ownerId);
     return ok(null);
   });
 }
@@ -252,6 +284,7 @@ export async function reorderMedia(ownerType: "PRODUCT" | "VARIANT" | "COLLECTIO
       return fail("The media list changed; reload and try again.");
     }
     await db.$transaction(orderedIds.map((id, position) => db.media.update({ where: { id }, data: { position } })));
+    await expireOwner(ownerType, ownerId);
     return ok(null);
   });
 }
@@ -278,6 +311,7 @@ export async function createCollection(_prev: ActionResult<{ id: string }> | nul
     if (!parsed.success) return failFromZod(parsed.error);
     try {
       const created = await db.collection.create({ data: parsed.data, select: { id: true } });
+      expire(collectionChangedTags(parsed.data.handle));
       return ok({ id: created.id });
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", { handle: "This handle is already taken" });
@@ -294,7 +328,10 @@ export async function updateCollection(id: string, _prev: ActionResult<{ id: str
     const parsed = readCollectionForm(formData);
     if (!parsed.success) return failFromZod(parsed.error);
     try {
+      const before = await db.collection.findUnique({ where: { id }, select: { handle: true } });
       await db.collection.update({ where: { id }, data: parsed.data });
+      expire(collectionChangedTags(parsed.data.handle));
+      if (before && before.handle !== parsed.data.handle) updateTag(tags.collection(before.handle));
       return ok({ id });
     } catch (error) {
       if (isUniqueViolation(error, "handle")) return fail("Please fix the highlighted fields.", { handle: "This handle is already taken" });
@@ -306,7 +343,8 @@ export async function updateCollection(id: string, _prev: ActionResult<{ id: str
 export async function deleteCollection(id: string): Promise<ActionResult<null>> {
   const result = await runAction<null>(async () => {
     await assertAdmin();
-    await db.collection.delete({ where: { id } });
+    const deleted = await db.collection.delete({ where: { id } });
+    expire(collectionChangedTags(deleted.handle));
     return ok(null);
   });
   if (result.ok) redirect("/admin/collections");
@@ -322,6 +360,7 @@ export async function addProductToCollection(collectionId: string, productId: st
       create: { collectionId, productId, position },
       update: {},
     });
+    await expireCollection(collectionId);
     return ok(null);
   });
 }
@@ -335,6 +374,7 @@ export async function removeProductFromCollection(collectionId: string, productI
       await tx.collectionProduct.delete({ where: { collectionId_productId: { collectionId, productId } } });
       await tx.collectionProduct.updateMany({ where: { collectionId, position: { gt: row.position } }, data: { position: { decrement: 1 } } });
     });
+    await expireCollection(collectionId);
     return ok(null);
   });
 }
@@ -352,6 +392,7 @@ export async function reorderCollectionProducts(collectionId: string, orderedPro
         db.collectionProduct.update({ where: { collectionId_productId: { collectionId, productId } }, data: { position } }),
       ),
     );
+    await expireCollection(collectionId);
     return ok(null);
   });
 }
@@ -382,6 +423,7 @@ export async function saveCollectionRules(collectionId: string, _prev: ActionRes
     const parsed = collectionRulesSchema.safeParse(raw);
     if (!parsed.success) return failFromZod(parsed.error);
     await db.collection.update({ where: { id: collectionId }, data: { rules: parsed.data } });
+    await expireCollection(collectionId);
     const { count } = await previewRules(parsed.data);
     return ok({ count });
   });

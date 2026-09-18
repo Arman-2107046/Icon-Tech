@@ -1,13 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { PNG } from "pngjs";
-
-async function login(page: Page) {
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@icontech.com.bd");
-  await page.getByLabel("Password").fill("admin12345");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/admin$/);
-}
+import { actAndWait, login, submitAndWait } from "./helpers";
 
 /** A 64×80 PNG with a red/blue split so the blurhash is non-trivial. */
 function makePng(): Buffer {
@@ -49,7 +42,7 @@ test("upload an image, edit its alt text, delete it", async ({ page }) => {
 
   // Alt text.
   await items.first().getByLabel("Alt text 1").fill("Red and blue split");
-  await items.first().getByRole("button", { name: "Save" }).click();
+  await submitAndWait(page, items.first().getByRole("button", { name: "Save" }));
   await page.reload();
   await expect(page.getByTestId("media-item").first().getByLabel("Alt text 1")).toHaveValue("Red and blue split");
   await expect(page.getByTestId("media-item").first().locator("img")).toHaveAttribute("alt", "Red and blue split");
@@ -76,11 +69,14 @@ test("reorder media by dragging and with the move buttons; order persists", asyn
   const [a, b, c] = await ids();
 
   // Drag the third onto the first: c, a, b
-  await items.nth(2).dragTo(items.nth(0));
+  const settled = () => expect(page.getByRole("button", { name: "Move image 1 later" })).toBeEnabled();
+  await actAndWait(page, () => items.nth(2).dragTo(items.nth(0)));
+  await settled();
   await expect.poll(ids).toEqual([c, a, b]);
 
   // Move "a" (now second) later: c, b, a
-  await page.getByRole("button", { name: "Move image 2 later" }).click();
+  await actAndWait(page, () => page.getByRole("button", { name: "Move image 2 later" }).click());
+  await settled();
   await expect.poll(ids).toEqual([c, b, a]);
 
   await page.reload();

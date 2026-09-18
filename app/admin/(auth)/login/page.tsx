@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/src/lib/auth/session";
 import { LoginForm } from "./login-form";
 
+// Session-gated: never prerendered as an instant shell (dev-only validation).
+export const instant = false;
+
 export const metadata: Metadata = { title: "Admin sign in" };
 
 export default async function AdminLoginPage() {

@@ -1,12 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-async function login(page: Page) {
-  await page.goto("/admin/login");
-  await page.getByLabel("Email").fill("admin@icontech.com.bd");
-  await page.getByLabel("Password").fill("admin12345");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/admin$/);
-}
+import { login } from "./helpers";
 
 async function createProduct(page: Page, title: string) {
   await page.goto("/admin/products/new");
@@ -95,6 +88,7 @@ test("variant rows save price, compare-at, SKU and stock inline", async ({ page 
   await row2.getByLabel("M SKU").fill(`E2E-${stamp}-S`);
   await row2.getByRole("button", { name: "Save" }).click();
   await expect(row2.getByText("Another variant already uses this SKU")).toBeVisible();
+  await expect(row.getByLabel("Saved")).toBeVisible();
 
   await page.reload();
   await expect(page.locator("tbody tr").nth(0).getByLabel("S price")).toHaveValue("1299.50");

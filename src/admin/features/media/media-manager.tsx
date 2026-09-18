@@ -46,11 +46,16 @@ export function MediaManager({ ownerType, ownerId, media }: { ownerType: OwnerTy
   const [dragId, setDragId] = useState<string | null>(null);
   const [reorderError, setReorderError] = useState<string | null>(null);
 
+  // Commits are serialised: a second drag while the first is saving must
+  // not race it (both would read stale state), so each waits for the last.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
   function commit(next: string[]) {
     setOrder(next);
     setReorderError(null);
     startTransition(async () => {
-      const result = await reorderMedia(ownerType, ownerId, next);
+      const run = queue.current.then(() => reorderMedia(ownerType, ownerId, next));
+      queue.current = run.catch(() => undefined);
+      const result = await run;
       if (!result.ok) setReorderError(result.error);
       router.refresh();
     });
