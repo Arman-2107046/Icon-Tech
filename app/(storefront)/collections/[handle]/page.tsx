@@ -14,7 +14,12 @@ export async function generateMetadata({ params }: PageProps<"/collections/[hand
   const { handle } = await params;
   const collection = await getStorefrontCollection(handle);
   if (!collection) return {};
-  return { title: collection.seoTitle ?? collection.title, description: collection.seoDescription ?? collection.description ?? undefined };
+  return {
+    title: collection.seoTitle ?? collection.title,
+    description: collection.seoDescription ?? collection.description ?? undefined,
+    alternates: { canonical: `/collections/${handle}` },
+    openGraph: { type: "website", title: collection.title, url: `/collections/${handle}` },
+  };
 }
 
 /**

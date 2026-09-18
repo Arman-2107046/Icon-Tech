@@ -4,13 +4,22 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getStorefrontProduct, toProductView } from "@/src/modules/catalog";
 import { Container, Section } from "@/src/storefront/components/layout";
+import { JsonLd } from "@/src/storefront/components/json-ld";
 import { ProductView } from "@/src/storefront/components/product/product-view";
+import { STORE_CURRENCY, money, toMajorUnits } from "@/src/lib/money";
+import { absoluteUrl } from "@/src/lib/site";
 
 export async function generateMetadata({ params }: PageProps<"/products/[handle]">): Promise<Metadata> {
   const { handle } = await params;
   const product = await getStorefrontProduct(handle);
   if (!product) return {};
-  return { title: product.seoTitle ?? product.title, description: product.seoDescription ?? product.description.split(". ")[0] };
+  const description = product.seoDescription ?? product.description.split(". ")[0];
+  return {
+    title: product.seoTitle ?? product.title,
+    description,
+    alternates: { canonical: `/products/${handle}` },
+    openGraph: { type: "website", title: product.title, description, url: `/products/${handle}` },
+  };
 }
 
 /** Static shell; the product (params) and the requested variant (searchParams) stream in. */
@@ -29,10 +38,54 @@ async function ProductContent({ params, searchParams }: PageProps<"/products/[ha
   const view = toProductView(product);
   const requested = typeof query.variant === "string" ? query.variant : null;
   const primaryTag = product.tags[0];
+  const prices = view.variants.map((v) => v.price);
+  const inStock = view.variants.some((v) => v.sellable > 0);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        "@id": absoluteUrl(`/products/${handle}#product`),
+        name: product.title,
+        description: product.seoDescription ?? product.description,
+        image: view.media.map((m) => absoluteUrl(m.url)),
+        brand: product.vendor ? { "@type": "Brand", name: product.vendor } : undefined,
+        sku: view.variants[0]?.sku ?? undefined,
+        offers:
+          view.variants.length === 1 && view.variants[0]
+            ? {
+                "@type": "Offer",
+                url: absoluteUrl(`/products/${handle}`),
+                priceCurrency: STORE_CURRENCY,
+                price: toMajorUnits(money(view.variants[0].price)).toFixed(2),
+                availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                itemCondition: "https://schema.org/NewCondition",
+              }
+            : {
+                "@type": "AggregateOffer",
+                url: absoluteUrl(`/products/${handle}`),
+                priceCurrency: STORE_CURRENCY,
+                lowPrice: toMajorUnits(money(Math.min(...prices))).toFixed(2),
+                highPrice: toMajorUnits(money(Math.max(...prices))).toFixed(2),
+                offerCount: view.variants.length,
+                availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+          ...(primaryTag ? [{ "@type": "ListItem", position: 2, name: primaryTag, item: absoluteUrl(`/collections/${primaryTag}`) }] : []),
+          { "@type": "ListItem", position: primaryTag ? 3 : 2, name: product.title, item: absoluteUrl(`/products/${handle}`) },
+        ],
+      },
+    ],
+  };
 
   return (
     <Section space="md">
       <Container>
+        <JsonLd data={structuredData} />
         <nav aria-label="Breadcrumb" className="mb-s4 text-t-sm text-ink-muted">
           <ol className="flex flex-wrap items-center gap-s1">
             <li>
