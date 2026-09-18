@@ -1,2 +1,26 @@
 // catalog module schema. Models for this module live here.
 // Merged with the other files in prisma/schema/ by Prisma.
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  handle         String        @unique
+  title          String
+  description    String        @default("")
+  status         ProductStatus @default(DRAFT)
+  vendor         String?
+  tags           String[]      @default([])
+  seoTitle       String?       @map("seo_title")
+  seoDescription String?       @map("seo_description")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([vendor])
+  @@map("products")
+}
