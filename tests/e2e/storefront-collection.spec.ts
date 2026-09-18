@@ -59,3 +59,31 @@ test.describe("collection page", () => {
     await expect(page.getByText(/not found/i).first()).toBeVisible();
   });
 });
+
+test("content page, sitemap, robots and structured data", async ({ page, request }) => {
+  await go(page, "/pages/about");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("About Icon Tech");
+  await expect(page.getByRole("heading", { name: "Fewer things, made properly" })).toBeVisible();
+  await go(page, "/pages/nope");
+  await expect(page.getByText("Page not found")).toBeVisible();
+
+  const sitemap = await request.get("/sitemap.xml");
+  expect(sitemap.status()).toBe(200);
+  const xml = await sitemap.text();
+  expect(xml).toContain("/products/aria-buds-pro");
+  expect(xml).toContain("/collections/audio");
+  expect(xml).toContain("/pages/about");
+
+  const robots = await (await request.get("/robots.txt")).text();
+  expect(robots).toContain("Disallow: /admin");
+  expect(robots).toContain("Sitemap:");
+
+  await go(page, "/products/aria-buds-pro");
+  const ld = await page.locator('script[type="application/ld+json"]').first().innerText();
+  const data = JSON.parse(ld) as { "@graph": { "@type": string }[] };
+  expect(data["@graph"].map((n) => n["@type"])).toEqual(["Product", "BreadcrumbList"]);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/products\/aria-buds-pro$/);
+  const og = await page.locator('meta[property="og:image"]').first().getAttribute("content");
+  const img = await request.get((og ?? "").replace(/^https?:\/\/[^/]+/, ""));
+  expect(img.headers()["content-type"]).toBe("image/png");
+});

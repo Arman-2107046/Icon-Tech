@@ -8,13 +8,14 @@
  * Allowed:
  *   app/tokens.css   the storefront token source of truth
  *   app/globals.css  shadcn's admin theme (admin is exempt from the storefront rules)
+ *   src/lib/og-palette.ts  tokens mirrored for Open Graph images (Satori has no CSS vars)
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
 const SCAN = ["app", "src"];
-const ALLOW = new Set(["app/tokens.css", "app/globals.css"]);
+const ALLOW = new Set(["app/tokens.css", "app/globals.css", "src/lib/og-palette.ts"]);
 const SKIP_DIRS = new Set(["node_modules", ".next", "generated"]);
 const EXT = /\.(css|ts|tsx)$/;
 
