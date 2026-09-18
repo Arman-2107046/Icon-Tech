@@ -29,3 +29,23 @@ export type AdminPageRow = Awaited<ReturnType<typeof listPagesForAdmin>>["rows"]
 export async function getPageForAdmin(id: string) {
   return db.page.findUnique({ where: { id } });
 }
+
+// ---- menus ------------------------------------------------------------------
+
+export async function listMenusForAdmin() {
+  return db.menu.findMany({
+    orderBy: { title: "asc" },
+    include: { items: { orderBy: { position: "asc" } } },
+  });
+}
+export type AdminMenu = Awaited<ReturnType<typeof listMenusForAdmin>>[number];
+export type AdminMenuItem = AdminMenu["items"][number];
+
+export type MenuTreeItem = AdminMenuItem & { children: AdminMenuItem[] };
+
+/** Two-level tree in position order. Orphans (parent missing) become roots. */
+export function buildMenuTree(items: AdminMenuItem[]): MenuTreeItem[] {
+  const ids = new Set(items.map((i) => i.id));
+  const roots = items.filter((i) => !i.parentId || !ids.has(i.parentId));
+  return roots.map((root) => ({ ...root, children: items.filter((i) => i.parentId === root.id) }));
+}

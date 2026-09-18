@@ -36,3 +36,26 @@ export const pageInputSchema = z.object({
     .transform((v) => (v === "" ? null : v)),
 });
 export type PageInput = z.infer<typeof pageInputSchema>;
+
+// ---- menus ------------------------------------------------------------------
+
+export const menuInputSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(80),
+  handle: handleSchema,
+});
+export type MenuInput = z.infer<typeof menuInputSchema>;
+
+export const menuItemInputSchema = z.object({
+  label: z.string().trim().min(1, "Label is required").max(80),
+  url: z
+    .string()
+    .trim()
+    .min(1, "URL is required")
+    .max(500)
+    .refine((v) => /^(\/|https?:\/\/|mailto:|tel:)/.test(v), "Use a path like /collections/audio or a full URL"),
+  parentId: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" || v === "__root__" ? null : v)),
+});
+export type MenuItemInput = z.infer<typeof menuItemInputSchema>;
