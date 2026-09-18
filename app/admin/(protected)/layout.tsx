@@ -1,4 +1,5 @@
 import { AdminSidebar } from "@/src/admin/components/admin-sidebar";
+import { AdminThemeProvider, AdminThemeScript } from "@/src/admin/components/theme";
 import { SidebarInset, SidebarProvider } from "@/src/admin/components/ui/sidebar";
 import { TooltipProvider } from "@/src/admin/components/ui/tooltip";
 import { requireAdmin } from "@/src/lib/auth/guards";
@@ -11,11 +12,14 @@ import { requireAdmin } from "@/src/lib/auth/guards";
 export default async function AdminProtectedLayout({ children }: LayoutProps<"/admin">) {
   const session = await requireAdmin();
   return (
-    <TooltipProvider>
-      <SidebarProvider>
-        <AdminSidebar user={session.user} />
-        <SidebarInset>{children}</SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+    <AdminThemeProvider>
+      <AdminThemeScript />
+      <TooltipProvider>
+        <SidebarProvider>
+          <AdminSidebar user={session.user} />
+          <SidebarInset>{children}</SidebarInset>
+        </SidebarProvider>
+      </TooltipProvider>
+    </AdminThemeProvider>
   );
 }

@@ -28,6 +28,7 @@ import {
 } from "@/src/admin/components/ui/sidebar";
 import { adminLogout } from "@/src/lib/auth/admin-actions";
 import { Button } from "@/src/admin/components/ui/button";
+import { ThemeToggle } from "@/src/admin/components/theme";
 
 type NavItem = { label: string; href: string; icon: typeof Package };
 type NavGroup = { label: string; items: NavItem[] };
@@ -116,8 +117,8 @@ export function AdminSidebar({ user }: { user: { name: string; email: string } }
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="flex items-center gap-2 px-2 py-1 group-data-[collapsible=icon]:hidden">
-          <div className="grid flex-1 text-left text-sm leading-tight">
+        <div className="flex items-center gap-1 px-2 py-1 group-data-[collapsible=icon]:hidden">
+          <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
             <span className="truncate font-medium">{user.name}</span>
             <span className="truncate text-xs text-muted-foreground">{user.email}</span>
           </div>
@@ -126,6 +127,9 @@ export function AdminSidebar({ user }: { user: { name: string; email: string } }
               Sign out
             </Button>
           </form>
+        </div>
+        <div className="hidden justify-center group-data-[collapsible=icon]:flex">
+          <ThemeToggle />
         </div>
       </SidebarFooter>
     </Sidebar>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Separator } from "@/src/admin/components/ui/separator";
 import { SidebarTrigger } from "@/src/admin/components/ui/sidebar";
+import { ThemeToggle } from "@/src/admin/components/theme";
 
 /** Sticky page header: sidebar toggle, title, optional actions on the right. */
 export function PageHeader({
@@ -20,7 +21,10 @@ export function PageHeader({
         <h1 className="truncate text-base font-semibold">{title}</h1>
         {description ? <p className="hidden truncate text-sm text-muted-foreground sm:block">{description}</p> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      <div className="flex items-center gap-2">
+        {actions}
+        <ThemeToggle />
+      </div>
     </header>
   );
 }
