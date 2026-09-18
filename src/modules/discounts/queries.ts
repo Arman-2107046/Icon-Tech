@@ -1,2 +1,3 @@
-// discounts module — read-side queries. Only imported via ./index.ts.
+// discounts module — read-side queries. Server only; imported via ./index.ts.
+import "server-only";
 export {};

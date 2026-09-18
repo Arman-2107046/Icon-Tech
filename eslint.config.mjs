@@ -11,7 +11,9 @@ const eslintConfig = defineConfig([
       // Project rule: no escape hatches from the type system.
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
-      // Modules talk only through their index.ts public API.
+      // Server code imports a module through its index.ts. Client components
+      // may import only actions.ts and types.ts, which are browser-safe;
+      // queries.ts is server-only and must never reach a client bundle.
       "no-restricted-imports": [
         "error",
         {
@@ -19,15 +21,13 @@ const eslintConfig = defineConfig([
             {
               group: [
                 "@/src/modules/*/*",
+                "!@/src/modules/*/actions",
+                "!@/src/modules/*/types",
                 "**/modules/*/queries",
-                "**/modules/*/actions",
-                "**/modules/*/types",
                 "../*/queries",
-                "../*/actions",
-                "../*/types",
               ],
               message:
-                "Import from the module's index.ts (e.g. '@/src/modules/catalog'), never from its internals.",
+                "Import from the module's index.ts (e.g. '@/src/modules/catalog'); client components may import '<module>/actions' and '<module>/types' directly.",
             },
           ],
         },

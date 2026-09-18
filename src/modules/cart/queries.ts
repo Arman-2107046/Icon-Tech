@@ -1,2 +1,3 @@
-// cart module — read-side queries. Only imported via ./index.ts.
+// cart module — read-side queries. Server only; imported via ./index.ts.
+import "server-only";
 export {};

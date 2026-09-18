@@ -1,2 +1,3 @@
-// orders module — read-side queries. Only imported via ./index.ts.
+// orders module — read-side queries. Server only; imported via ./index.ts.
+import "server-only";
 export {};

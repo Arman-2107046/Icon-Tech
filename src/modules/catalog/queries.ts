@@ -1,4 +1,6 @@
-// catalog module — read-side queries. Only imported via ./index.ts.
+// catalog module — read-side queries. Server only; imported via ./index.ts.
+
+import "server-only";
 
 import type { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/src/lib/db";
@@ -98,3 +100,20 @@ export async function listCollectionsBrief(): Promise<{ id: string; handle: stri
     select: { id: true, handle: true, title: true, type: true },
   });
 }
+
+// ---- admin: product detail ---------------------------------------------------
+
+export async function getProductForAdmin(id: string) {
+  return db.product.findUnique({
+    where: { id },
+    include: {
+      options: { orderBy: { position: "asc" }, include: { values: { orderBy: { position: "asc" } } } },
+      variants: {
+        orderBy: { position: "asc" },
+        include: { inventory: true, optionValues: { select: { optionValueId: true } } },
+      },
+    },
+  });
+}
+
+export type AdminProduct = NonNullable<Awaited<ReturnType<typeof getProductForAdmin>>>;
