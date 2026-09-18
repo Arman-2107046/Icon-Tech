@@ -18,6 +18,7 @@ model Customer {
   carts               Cart[]
   orders              Order[]
   discountRedemptions DiscountRedemption[]
+  sessions            Session[]
 
   @@index([createdAt])
   @@map("customers")
