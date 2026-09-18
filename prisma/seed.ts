@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { db } from "../src/lib/db";
+import { seedAdmin } from "./seed/admin";
 import { seedCatalog } from "./seed/catalog";
 import { seedCollections } from "./seed/collections";
 import { seedCustomers } from "./seed/customers";
@@ -64,9 +65,16 @@ async function main(): Promise<void> {
   const started = Date.now();
   console.log(`seed: ${RESET ? "resetting and " : ""}seeding demo store`);
 
-  if (RESET) await reset();
+  if (RESET) {
+    await reset();
+  } else if ((await db.product.count()) > 0) {
+    console.error("seed: database already has data. Re-run with --reset to wipe and reseed.");
+    process.exitCode = 1;
+    return;
+  }
 
   const steps: Step[] = [
+    { name: "admin user", run: seedAdmin },
     { name: "settings, menus, pages, shipping, tax, discounts", run: seedSettings },
     { name: "products", run: seedCatalog },
     { name: "collections", run: seedCollections },
