@@ -1,2 +1,95 @@
 // orders module schema. Models for this module live here.
 // Merged with the other files in prisma/schema/ by Prisma.
+
+/// Lifecycle: PENDING -> PAID -> FULFILLED -> COMPLETED, with CANCELLED and
+/// REFUNDED branches. Transitions are enforced in the orders service.
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum FinancialStatus {
+  UNPAID
+  AUTHORIZED
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  VOIDED
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIALLY_FULFILLED
+  FULFILLED
+}
+
+/// An order is an immutable snapshot of what the customer bought, at the
+/// prices they paid. Customer name/email and both addresses are copied in
+/// so later edits to the customer record never rewrite history. All money
+/// columns are integer minor units in `currency`.
+model Order {
+  id                String            @id @default(cuid())
+  number            Int               @unique @default(autoincrement())
+  customerId        String?           @map("customer_id")
+  email             String
+  customerName      String            @map("customer_name")
+  phone             String?
+  shippingAddress   Json              @map("shipping_address")
+  billingAddress    Json              @map("billing_address")
+  currency          String            @db.Char(3)
+  subtotal          Int
+  discountTotal     Int               @default(0) @map("discount_total")
+  shippingTotal     Int               @default(0) @map("shipping_total")
+  taxTotal          Int               @default(0) @map("tax_total")
+  total             Int
+  shippingMethod    String?           @map("shipping_method")
+  discountCode      String?           @map("discount_code")
+  status            OrderStatus       @default(PENDING)
+  financialStatus   FinancialStatus   @default(UNPAID) @map("financial_status")
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED) @map("fulfillment_status")
+  note              String            @default("")
+  internalNote      String            @default("") @map("internal_note")
+  placedAt          DateTime          @default(now()) @map("placed_at")
+  paidAt            DateTime?         @map("paid_at")
+  cancelledAt       DateTime?         @map("cancelled_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+
+  @@index([customerId, placedAt])
+  @@index([status, placedAt])
+  @@index([email])
+  @@map("orders")
+}
+
+/// Line item snapshot. `variantId` is kept for reporting but nullable so
+/// deleting a variant never deletes sales history.
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String  @map("order_id")
+  variantId    String? @map("variant_id")
+  productId    String? @map("product_id")
+  title        String
+  variantTitle String  @map("variant_title")
+  sku          String?
+  /// Selected options at purchase, e.g. {"Size":"M","Colour":"Red"}.
+  options      Json
+  imageUrl     String? @map("image_url")
+  unitPrice    Int     @map("unit_price")
+  quantity     Int
+  lineTotal    Int     @map("line_total")
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant Variant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([variantId])
+  @@index([productId])
+  @@map("order_items")
+}

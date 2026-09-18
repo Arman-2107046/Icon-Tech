@@ -80,6 +80,7 @@ model Variant {
   inventory    InventoryItem?
   reservations InventoryReservation[]
   cartItems    CartItem[]
+  orderItems   OrderItem[]
 
   @@index([productId, position])
   @@index([barcode])

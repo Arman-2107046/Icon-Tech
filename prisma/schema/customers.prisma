@@ -16,6 +16,7 @@ model Customer {
 
   addresses Address[]
   carts     Cart[]
+  orders    Order[]
 
   @@index([createdAt])
   @@map("customers")
