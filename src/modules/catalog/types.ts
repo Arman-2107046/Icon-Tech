@@ -141,3 +141,17 @@ export const collectionInputSchema = z.object({
 });
 
 export type CollectionInput = z.infer<typeof collectionInputSchema>;
+
+// Rule definitions are browser-safe (the Prisma import in rules.ts is type-only).
+export {
+  NEEDS_VALUE,
+  OPERATORS_FOR,
+  RULE_FIELDS,
+  RULE_OPERATORS,
+  collectionRulesSchema,
+  parseRules,
+  type CollectionRules,
+  type RuleCondition,
+  type RuleField,
+  type RuleOperator,
+} from "./rules";

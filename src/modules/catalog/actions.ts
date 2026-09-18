@@ -10,7 +10,8 @@ import { isUniqueViolation } from "@/src/lib/db-errors";
 import { cleanOptions, combinations, planVariants } from "./matrix";
 import { fromMajorUnits } from "@/src/lib/money";
 import { deleteUpload } from "@/src/lib/storage";
-import { coverImagesFor, searchProductsBrief } from "./queries";
+import { coverImagesFor, previewRules, searchProductsBrief } from "./queries";
+import { collectionRulesSchema } from "./rules";
 import { MAX_VARIANTS, collectionInputSchema, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
 
 function readProductForm(formData: FormData) {
@@ -364,5 +365,33 @@ export async function searchProductsForPicker(q: string, excludeIds: string[]): 
     const products = await searchProductsBrief(q, excludeIds);
     const covers = await coverImagesFor(products.map((p) => p.id));
     return ok(products.map((p) => ({ ...p, imageUrl: covers.get(p.id) ?? null })));
+  });
+}
+
+// ---- collection rules -------------------------------------------------------
+
+export async function saveCollectionRules(collectionId: string, _prev: ActionResult<{ count: number }> | null, formData: FormData): Promise<ActionResult<{ count: number }>> {
+  return runAction<{ count: number }>(async () => {
+    await assertAdmin();
+    let raw: unknown;
+    try {
+      raw = JSON.parse(String(formData.get("rules") ?? ""));
+    } catch {
+      return fail("Could not read the rules.");
+    }
+    const parsed = collectionRulesSchema.safeParse(raw);
+    if (!parsed.success) return failFromZod(parsed.error);
+    await db.collection.update({ where: { id: collectionId }, data: { rules: parsed.data } });
+    const { count } = await previewRules(parsed.data);
+    return ok({ count });
+  });
+}
+
+export async function previewCollectionRules(raw: unknown): Promise<ActionResult<{ count: number; sample: { id: string; title: string }[] }>> {
+  return runAction(async () => {
+    await assertAdmin();
+    const parsed = collectionRulesSchema.safeParse(raw);
+    if (!parsed.success) return failFromZod(parsed.error);
+    return ok(await previewRules(parsed.data));
   });
 }

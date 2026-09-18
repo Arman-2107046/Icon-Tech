@@ -4,9 +4,10 @@ import { Badge } from "@/src/admin/components/ui/badge";
 import { CollectionForm } from "@/src/admin/features/collections/collection-form";
 import { DeleteCollectionButton } from "@/src/admin/features/collections/delete-collection-button";
 import { ProductPicker } from "@/src/admin/features/collections/product-picker";
+import { RuleEditor } from "@/src/admin/features/collections/rule-editor";
 import { MediaManager } from "@/src/admin/features/media/media-manager";
 import { requireAdmin } from "@/src/lib/auth/guards";
-import { coverImagesFor, getCollectionForAdmin, listMedia } from "@/src/modules/catalog";
+import { coverImagesFor, getCollectionForAdmin, listMedia, parseRules } from "@/src/modules/catalog";
 
 export default async function EditCollectionPage({ params }: PageProps<"/admin/collections/[id]">) {
   await requireAdmin();
@@ -54,7 +55,9 @@ export default async function EditCollectionPage({ params }: PageProps<"/admin/c
               imageUrl: covers.get(cp.productId) ?? null,
             }))}
           />
-        ) : null}
+        ) : (
+          <RuleEditor collectionId={collection.id} initial={parseRules(collection.rules)} />
+        )}
       </div>
     </>
   );

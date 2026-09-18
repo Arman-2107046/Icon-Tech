@@ -5,6 +5,7 @@ import "server-only";
 import type { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/src/lib/db";
 import type { ProductStatus } from "@/src/generated/prisma/enums";
+import { parseRules, rulesToWhere, type CollectionRules } from "./rules";
 
 // ---- admin: products list ----------------------------------------------------
 
@@ -45,8 +46,12 @@ export async function listProductsForAdmin(params: AdminProductListParams): Prom
         }
       : {}),
     ...(params.status ? { status: params.status } : {}),
-    ...(params.collectionHandle ? { collections: { some: { collection: { handle: params.collectionHandle } } } } : {}),
   };
+  if (params.collectionHandle) {
+    const membership = await collectionMembershipWhereByHandle(params.collectionHandle);
+    // Unknown handle or broken rules: match nothing rather than everything.
+    where.AND = [membership ?? { id: { in: [] } }];
+  }
 
   const [products, total] = await Promise.all([
     db.product.findMany({
@@ -192,4 +197,33 @@ export async function coverImagesFor(productIds: string[]): Promise<Map<string, 
     select: { ownerId: true, url: true },
   });
   return new Map(media.map((m) => [m.ownerId, m.url]));
+}
+
+// ---- collection membership (manual + rule) ----------------------------------
+
+/**
+ * Where-clause selecting a collection's products. Manual collections are
+ * the explicit membership rows; rule collections evaluate their rules.
+ * Returns null for a rule collection whose stored rules are invalid.
+ */
+export function collectionMembershipWhere(collection: { id: string; type: "MANUAL" | "RULE"; rules: unknown }): Prisma.ProductWhereInput | null {
+  if (collection.type === "MANUAL") return { collections: { some: { collectionId: collection.id } } };
+  const rules = parseRules(collection.rules);
+  return rules ? rulesToWhere(rules) : null;
+}
+
+/** Same, looked up by handle; null when the collection does not exist or its rules are invalid. */
+export async function collectionMembershipWhereByHandle(handle: string): Promise<Prisma.ProductWhereInput | null> {
+  const collection = await db.collection.findUnique({ where: { handle }, select: { id: true, type: true, rules: true } });
+  return collection ? collectionMembershipWhere(collection) : null;
+}
+
+/** Admin preview of a rule set: how many products match and a few titles. */
+export async function previewRules(rules: CollectionRules): Promise<{ count: number; sample: { id: string; title: string }[] }> {
+  const where = rulesToWhere(rules);
+  const [count, sample] = await Promise.all([
+    db.product.count({ where }),
+    db.product.findMany({ where, orderBy: { title: "asc" }, take: 5, select: { id: true, title: true } }),
+  ]);
+  return { count, sample };
 }
