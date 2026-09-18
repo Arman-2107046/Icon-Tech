@@ -3,3 +3,4 @@
 export * from "./queries";
 export * from "./actions";
 export * from "./types";
+export { readCartToken, clearCartCookie } from "./token";
