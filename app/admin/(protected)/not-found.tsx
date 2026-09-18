@@ -8,7 +8,7 @@ export default function AdminNotFound() {
       <PageHeader title="Not found" />
       <div className="p-6">
         <p className="text-sm text-muted-foreground">That page does not exist.</p>
-        <Button className="mt-4" variant="outline" render={<Link href="/admin" />}>
+        <Button className="mt-4" variant="outline" nativeButton={false} render={<Link href="/admin" />}>
           Back to dashboard
         </Button>
       </div>
