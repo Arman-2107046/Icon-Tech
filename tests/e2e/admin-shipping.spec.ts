@@ -64,3 +64,37 @@ test("shipping zones and rates: create, validate, edit, delete", async ({ page }
   await zone.getByRole("button", { name: `Delete zone ${zoneName}` }).click();
   await expect(page.getByTestId("shipping-zone").filter({ hasText: zoneName })).toHaveCount(0);
 });
+
+test("tax rates: create, reject duplicate country/region, edit, delete", async ({ page }) => {
+  await login(page);
+  await page.goto("/admin/shipping");
+  const card = page.getByTestId("tax-rates");
+  await expect(card.locator("tbody tr").filter({ hasText: "BD" }).first()).toContainText("5%");
+
+  // Duplicate of the seeded BD country-wide rate.
+  await card.getByRole("button", { name: "Add tax rate" }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByRole("textbox", { name: "Name" }).fill("VAT");
+  await dialog.getByRole("textbox", { name: "Country" }).fill("bd");
+  await dialog.getByRole("textbox", { name: "Rate (%)" }).fill("7.5");
+  await dialog.getByRole("button", { name: "Create tax rate" }).click();
+  await expect(dialog.getByText("A rate for this country and region already exists")).toBeVisible();
+
+  // Region-specific rate is fine.
+  await dialog.getByRole("textbox", { name: "Region" }).fill("E2E Region");
+  await dialog.getByRole("button", { name: "Create tax rate" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const row = card.locator("tbody tr").filter({ hasText: "E2E Region" });
+  await expect(row).toContainText("7.5%");
+
+  await row.getByRole("button", { name: "Edit tax rate VAT" }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByRole("textbox", { name: "Rate (%)" }).fill("10");
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toContainText("10%");
+
+  page.on("dialog", (d) => d.accept());
+  await row.getByRole("button", { name: "Delete tax rate VAT BD E2E Region" }).click();
+  await expect(card.locator("tbody tr").filter({ hasText: "E2E Region" })).toHaveCount(0);
+});

@@ -118,12 +118,25 @@ function readTax(formData: FormData) {
 
 const DUPLICATE_TAX = "A rate for this country and region already exists";
 
+/**
+ * The (country, region) unique index does not catch two country-wide rows
+ * because Postgres treats NULL regions as distinct, so check explicitly.
+ */
+async function taxRateExists(country: string, region: string | null, exceptId?: string): Promise<boolean> {
+  const hit = await db.taxRate.findFirst({
+    where: { country, region: region ?? null, ...(exceptId ? { id: { not: exceptId } } : {}) },
+    select: { id: true },
+  });
+  return hit !== null;
+}
+
 export async function createTaxRate(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
   return runAction<null>(async () => {
     await assertAdmin();
     const parsed = readTax(formData);
     if (!parsed.success) return failFromZod(parsed.error);
     const { rate, ...rest } = parsed.data;
+    if (await taxRateExists(rest.country, rest.region)) return fail("Please fix the highlighted fields.", { region: DUPLICATE_TAX });
     try {
       await db.taxRate.create({ data: { ...rest, rateBps: Math.round(Number(rate) * 100) } });
       return ok(null);
@@ -140,6 +153,7 @@ export async function updateTaxRate(taxRateId: string, _prev: ActionResult<null>
     const parsed = readTax(formData);
     if (!parsed.success) return failFromZod(parsed.error);
     const { rate, ...rest } = parsed.data;
+    if (await taxRateExists(rest.country, rest.region, taxRateId)) return fail("Please fix the highlighted fields.", { region: DUPLICATE_TAX });
     try {
       await db.taxRate.update({ where: { id: taxRateId }, data: { ...rest, rateBps: Math.round(Number(rate) * 100) } });
       return ok(null);
