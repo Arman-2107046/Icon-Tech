@@ -21,7 +21,12 @@ test.describe("admin login", () => {
     await expect(page).toHaveURL(/\/admin$/);
     await expect(page.getByText(`Signed in as ${EMAIL}`)).toBeVisible();
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    // On narrow viewports the sidebar is an off-canvas sheet; open it first.
+    const signOut = page.getByRole("button", { name: "Sign out" });
+    if (!(await signOut.isVisible())) {
+      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+    }
+    await signOut.click();
     await expect(page).toHaveURL(/\/admin\/login$/);
   });
 });
