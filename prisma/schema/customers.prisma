@@ -1,2 +1,45 @@
 // customers module schema. Models for this module live here.
 // Merged with the other files in prisma/schema/ by Prisma.
+
+/// A storefront customer. Login is by magic link only, so there is no
+/// password column here.
+model Customer {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  firstName        String   @default("") @map("first_name")
+  lastName         String   @default("") @map("last_name")
+  phone            String?
+  acceptsMarketing Boolean  @default(false) @map("accepts_marketing")
+  note             String   @default("")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  addresses Address[]
+
+  @@index([createdAt])
+  @@map("customers")
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  firstName  String   @map("first_name")
+  lastName   String   @map("last_name")
+  company    String?
+  line1      String
+  line2      String?
+  city       String
+  region     String?
+  postalCode String?  @map("postal_code")
+  /// ISO 3166-1 alpha-2, e.g. "BD".
+  country    String   @db.Char(2)
+  phone      String?
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isDefault])
+  @@map("addresses")
+}
