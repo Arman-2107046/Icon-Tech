@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { addToCart as addToCartAction } from "@/src/modules/cart/actions";
 import { findVariant, initialSelection, isValueAvailable, stockLabel, type ProductView as ProductViewModel } from "@/src/modules/catalog/types";
 import { Badge, Button, Price } from "@/src/storefront/components/ui";
 import { cx } from "@/src/storefront/lib/cx";
@@ -13,7 +15,21 @@ import { Gallery } from "./gallery";
  * history.replaceState so a shared link opens on the same variant, without
  * any navigation.
  */
-export function ProductView({ product, requestedVariantId, addToCart }: { product: ProductViewModel; requestedVariantId: string | null; addToCart?: (variantId: string) => Promise<void> }) {
+export function ProductView({ product, requestedVariantId }: { product: ProductViewModel; requestedVariantId: string | null }) {
+  const router = useRouter();
+  const [addError, setAddError] = useState<string | null>(null);
+  const [added, setAdded] = useState(false);
+  const addToCart = async (variantId: string) => {
+    setAddError(null);
+    const result = await addToCartAction(variantId, 1);
+    if (!result.ok) {
+      setAddError(result.error);
+      return;
+    }
+    setAdded(true);
+    router.refresh(); // header count
+    window.setTimeout(() => setAdded(false), 2500);
+  };
   const [selection, setSelection] = useState<Record<string, string>>(() => initialSelection(product.variants, requestedVariantId));
   const variant = findVariant(product.variants, selection);
   const media = variant?.media.length ? variant.media : product.media;
@@ -41,7 +57,7 @@ export function ProductView({ product, requestedVariantId, addToCart }: { produc
 
   const [adding, setAdding] = useState(false);
   const onAdd = async () => {
-    if (!variant || !addToCart) return;
+    if (!variant) return;
     setAdding(true);
     try {
       await addToCart(variant.id);
@@ -107,8 +123,13 @@ export function ProductView({ product, requestedVariantId, addToCart }: { produc
 
           <div ref={buyRef} className="mt-s5 flex flex-col gap-s2">
             <Button size="lg" disabled={!canBuy} loading={adding} onClick={onAdd} data-testid="add-to-cart">
-              {canBuy ? "Add to cart" : "Sold out"}
+              {canBuy ? (added ? "Added to cart ✓" : "Add to cart") : "Sold out"}
             </Button>
+            {addError ? (
+              <p role="alert" className="text-t-sm text-danger">
+                {addError}
+              </p>
+            ) : null}
             <p className="text-t-sm text-ink-muted">Next-day delivery inside Dhaka · Cash on delivery available · 14-day returns</p>
           </div>
 
