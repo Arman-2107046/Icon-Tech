@@ -28,8 +28,11 @@ export async function getStorefrontProduct(handle: string) {
   });
   if (!product) return null;
   cacheTag(tags.product(product.id));
-  const media = await db.media.findMany({ where: { ownerType: "PRODUCT", ownerId: product.id }, orderBy: { position: "asc" } });
-  return { ...product, media };
+  const [media, variantMedia] = await Promise.all([
+    db.media.findMany({ where: { ownerType: "PRODUCT", ownerId: product.id }, orderBy: { position: "asc" } }),
+    db.media.findMany({ where: { ownerType: "VARIANT", ownerId: { in: product.variants.map((v) => v.id) } }, orderBy: { position: "asc" } }),
+  ]);
+  return { ...product, media, variantMedia };
 }
 
 export type StorefrontProduct = NonNullable<Awaited<ReturnType<typeof getStorefrontProduct>>>;

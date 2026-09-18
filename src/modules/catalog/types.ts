@@ -157,3 +157,4 @@ export {
 } from "./rules";
 
 export * from "./collection-query";
+export * from "./product-view";
