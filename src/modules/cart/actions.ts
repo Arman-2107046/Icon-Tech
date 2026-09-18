@@ -6,7 +6,7 @@ import { type ActionResult, fail, ok, runAction } from "@/src/lib/action-result"
 import { db } from "@/src/lib/db";
 import { STORE_CURRENCY } from "@/src/lib/money";
 import { getCustomerSession } from "@/src/lib/auth/session";
-import { findActiveCartByToken, toCartView } from "./queries";
+import { findActiveCartByToken, getCart, toCartView } from "./queries";
 import { issueCartToken, readCartToken, writeCartCookie } from "./token";
 import { MAX_LINE_QUANTITY, quantitySchema, type CartView } from "./types";
 
@@ -97,4 +97,9 @@ export async function updateCartLine(lineId: string, quantity: number): Promise<
 
 export async function removeCartLine(lineId: string): Promise<ActionResult<CartView>> {
   return updateCartLine(lineId, 0);
+}
+
+/** Read-only view for the drawer; never creates a cart or sets a cookie. */
+export async function fetchCart(): Promise<ActionResult<CartView>> {
+  return runAction<CartView>(async () => ok(await getCart()));
 }

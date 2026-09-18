@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { addToCart as addToCartAction } from "@/src/modules/cart/actions";
+import { useCart } from "@/src/storefront/cart/cart-context";
 import { findVariant, initialSelection, isValueAvailable, stockLabel, type ProductView as ProductViewModel } from "@/src/modules/catalog/types";
 import { Badge, Button, Price } from "@/src/storefront/components/ui";
 import { cx } from "@/src/storefront/lib/cx";
@@ -16,18 +15,17 @@ import { Gallery } from "./gallery";
  * any navigation.
  */
 export function ProductView({ product, requestedVariantId }: { product: ProductViewModel; requestedVariantId: string | null }) {
-  const router = useRouter();
+  const { addLine } = useCart();
   const [addError, setAddError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
   const addToCart = async (variantId: string) => {
     setAddError(null);
-    const result = await addToCartAction(variantId, 1);
+    const result = await addLine(variantId, 1);
     if (!result.ok) {
-      setAddError(result.error);
+      setAddError(result.error ?? "Could not add to cart.");
       return;
     }
     setAdded(true);
-    router.refresh(); // header count
     window.setTimeout(() => setAdded(false), 2500);
   };
   const [selection, setSelection] = useState<Record<string, string>>(() => initialSelection(product.variants, requestedVariantId));
