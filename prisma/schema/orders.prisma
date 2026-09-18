@@ -59,8 +59,11 @@ model Order {
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
-  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  items    OrderItem[]
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  payments     Payment[]
+  refunds      Refund[]
+  fulfillments Fulfillment[]
 
   @@index([customerId, placedAt])
   @@index([status, placedAt])
@@ -92,4 +95,88 @@ model OrderItem {
   @@index([variantId])
   @@index([productId])
   @@map("order_items")
+}
+
+enum PaymentProvider {
+  STRIPE
+  SSLCOMMERZ
+  COD
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+/// One payment attempt against an order. `providerTxnId` is the gateway's
+/// own id and is unique so a replayed webhook cannot create a second row.
+/// `raw` keeps the gateway's last payload for audit.
+model Payment {
+  id            String          @id @default(cuid())
+  orderId       String          @map("order_id")
+  provider      PaymentProvider
+  providerTxnId String?         @unique @map("provider_txn_id")
+  amount        Int
+  currency      String          @db.Char(3)
+  status        PaymentStatus   @default(PENDING)
+  raw           Json?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refunds Refund[]
+
+  @@index([orderId])
+  @@index([provider, status])
+  @@map("payments")
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model Refund {
+  id            String       @id @default(cuid())
+  orderId       String       @map("order_id")
+  paymentId     String       @map("payment_id")
+  providerTxnId String?      @unique @map("provider_txn_id")
+  amount        Int
+  currency      String       @db.Char(3)
+  reason        String       @default("")
+  status        RefundStatus @default(PENDING)
+  raw           Json?
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@map("refunds")
+}
+
+/// A shipment of some or all of an order's items.
+/// `items` is [{ orderItemId, quantity }].
+model Fulfillment {
+  id             String    @id @default(cuid())
+  orderId        String    @map("order_id")
+  items          Json
+  carrier        String?
+  trackingNumber String?   @map("tracking_number")
+  trackingUrl    String?   @map("tracking_url")
+  shippedAt      DateTime  @default(now()) @map("shipped_at")
+  deliveredAt    DateTime? @map("delivered_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("fulfillments")
 }
