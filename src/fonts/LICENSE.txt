@@ -1,0 +1,6 @@
+Space Grotesk — Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
+Geist — Copyright 2023 Vercel, Inc. (https://github.com/vercel/geist-font)
+
+Both fonts are licensed under the SIL Open Font License, Version 1.1.
+https://openfontlicense.org
+The files in this directory are the latin subsets served by Google Fonts.

@@ -157,4 +157,8 @@
   --text-t-5xl: var(--text-5xl);
 
   --ease-out-expo: var(--ease-out-expo);
+
+  /* font-display / font-text (families come from next/font/local) */
+  --font-display: var(--font-display), "Space Grotesk", system-ui, sans-serif;
+  --font-text: var(--font-text), "Geist", system-ui, sans-serif;
 }
