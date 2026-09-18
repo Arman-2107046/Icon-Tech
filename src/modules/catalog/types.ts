@@ -155,3 +155,5 @@ export {
   type RuleField,
   type RuleOperator,
 } from "./rules";
+
+export * from "./collection-query";

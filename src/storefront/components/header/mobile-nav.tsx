@@ -11,6 +11,17 @@ import { cx } from "@/src/storefront/lib/cx";
  * so focus trapping, Escape and the inert background come for free. Closes
  * itself on route change. Sub-items render as an expandable group.
  */
+/** Static stand-in while the client drawer (which reads the URL) streams in. */
+export function MobileNavFallback() {
+  return (
+    <span className="-ml-s1 inline-flex size-11 items-center justify-center rounded-sf-full text-ink lg:hidden" aria-hidden>
+      <svg className="size-5" viewBox="0 0 24 24" fill="none">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
 export function MobileNav({ items, storeName }: { items: StorefrontMenu["items"]; storeName: string }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);

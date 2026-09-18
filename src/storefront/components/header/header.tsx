@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import { getMenu, getCachedSiteSettings } from "@/src/modules/content";
 import { Container } from "@/src/storefront/components/layout";
 import { CartTrigger, CartTriggerFallback } from "./cart-trigger";
-import { MobileNav } from "./mobile-nav";
-import { NavMenu } from "./nav-menu";
+import { MobileNav, MobileNavFallback } from "./mobile-nav";
+import { NavMenu, NavMenuView } from "./nav-menu";
 import { SearchTrigger } from "./search-trigger";
 
 /**
@@ -18,13 +18,17 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur supports-[backdrop-filter]:bg-canvas/80">
       <Container className="flex h-16 items-center gap-s3 lg:h-20">
-        <MobileNav items={items} storeName={settings.store.name} />
+        <Suspense fallback={<MobileNavFallback />}>
+          <MobileNav items={items} storeName={settings.store.name} />
+        </Suspense>
 
         <Link href="/" className="display text-t-md tracking-tight lg:text-t-lg" aria-label={`${settings.store.name} home`}>
           {settings.store.name}
         </Link>
 
-        <NavMenu items={items} className="ml-s4 hidden lg:flex" />
+        <Suspense fallback={<NavMenuView items={items} className="ml-s4 hidden lg:flex" />}>
+          <NavMenu items={items} className="ml-s4 hidden lg:flex" />
+        </Suspense>
 
         <div className="ml-auto flex items-center gap-s0-5">
           <SearchTrigger />

@@ -5,9 +5,17 @@ import { usePathname } from "next/navigation";
 import type { StorefrontMenu } from "@/src/modules/content/types";
 import { cx } from "@/src/storefront/lib/cx";
 
-/** Desktop navigation. Top-level items with children get a hover/focus flyout. */
+/** Client wrapper: adds the active state from the current URL. */
 export function NavMenu({ items, className }: { items: StorefrontMenu["items"]; className?: string }) {
   const pathname = usePathname();
+  return <NavMenuView items={items} className={className} pathname={pathname} />;
+}
+
+/**
+ * Desktop navigation. Pure: renders from props only, so it also serves as
+ * the Suspense fallback (no active state) during prerendering.
+ */
+export function NavMenuView({ items, className, pathname = "" }: { items: StorefrontMenu["items"]; className?: string; pathname?: string }) {
   return (
     <nav aria-label="Main" className={cx("items-center gap-s1", className)}>
       {items.map((item) => {
