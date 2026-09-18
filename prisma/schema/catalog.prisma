@@ -196,6 +196,7 @@ model InventoryReservation {
   variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, variantId])
+  @@index([variantId])
   @@index([expiresAt])
   @@map("inventory_reservations")
 }

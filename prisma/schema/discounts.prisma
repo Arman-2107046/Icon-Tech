@@ -50,5 +50,7 @@ model DiscountRedemption {
 
   @@unique([discountId, orderId])
   @@index([discountId, customerId])
+  @@index([orderId])
+  @@index([customerId])
   @@map("discount_redemptions")
 }

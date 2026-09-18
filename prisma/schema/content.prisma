@@ -45,6 +45,7 @@ model MenuItem {
   children MenuItem[] @relation("MenuItemChildren")
 
   @@index([menuId, parentId, position])
+  @@index([parentId])
   @@map("menu_items")
 }
 
