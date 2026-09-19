@@ -8,17 +8,20 @@ enum ProductStatus {
 }
 
 model Product {
-  id             String        @id @default(cuid())
-  handle         String        @unique
+  id             String                   @id @default(cuid())
+  handle         String                   @unique
   title          String
-  description    String        @default("")
-  status         ProductStatus @default(DRAFT)
+  description    String                   @default("")
+  status         ProductStatus            @default(DRAFT)
   vendor         String?
-  tags           String[]      @default([])
-  seoTitle       String?       @map("seo_title")
-  seoDescription String?       @map("seo_description")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  tags           String[]                 @default([])
+  seoTitle       String?                  @map("seo_title")
+  seoDescription String?                  @map("seo_description")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  /// Generated tsvector over title/vendor/tags/description (see the
+  /// product_search migration); Prisma never reads or writes it.
+  search         Unsupported("tsvector")?
 
   options     ProductOption[]
   variants    Variant[]
@@ -26,6 +29,8 @@ model Product {
 
   @@index([status])
   @@index([vendor])
+  @@index([search], type: Gin)
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "products_title_trgm_idx")
   @@map("products")
 }
 
