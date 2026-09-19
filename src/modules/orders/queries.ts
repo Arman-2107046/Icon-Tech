@@ -74,3 +74,65 @@ export function fulfilledQuantities(order: AdminOrder): Map<string, number> {
 export function refundedTotal(order: AdminOrder): number {
   return order.refunds.filter((r) => r.status === "SUCCEEDED").reduce((n, r) => n + r.amount, 0);
 }
+
+// ---- admin dashboard --------------------------------------------------------------
+
+const COUNTED: OrderStatus[] = ["PENDING", "PAID", "FULFILLED", "COMPLETED"];
+
+export type DashboardMetrics = {
+  days: number;
+  revenue: number;
+  orders: number;
+  averageOrder: number;
+  awaiting: { unpaid: number; unfulfilled: number };
+  /** One point per day, oldest first, revenue in minor units. */
+  series: { day: string; revenue: number; orders: number }[];
+  topProducts: { productId: string | null; title: string; quantity: number; revenue: number }[];
+};
+
+/** Sales figures for the last `days` days (cancelled/refunded orders excluded). */
+export async function getDashboardMetrics(days = 30): Promise<DashboardMetrics> {
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  since.setDate(since.getDate() - (days - 1));
+
+  const [orders, unpaid, unfulfilled, top] = await Promise.all([
+    db.order.findMany({ where: { placedAt: { gte: since }, status: { in: COUNTED } }, select: { total: true, placedAt: true } }),
+    db.order.count({ where: { financialStatus: "UNPAID", status: { in: COUNTED } } }),
+    db.order.count({ where: { fulfillmentStatus: { not: "FULFILLED" }, status: { in: COUNTED } } }),
+    db.orderItem.groupBy({
+      by: ["productId", "title"],
+      where: { order: { placedAt: { gte: since }, status: { in: COUNTED } } },
+      _sum: { quantity: true, lineTotal: true },
+      orderBy: { _sum: { quantity: "desc" } },
+      take: 5,
+    }),
+  ]);
+
+  const byDay = new Map<string, { revenue: number; orders: number }>();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(since);
+    d.setDate(since.getDate() + i);
+    byDay.set(d.toISOString().slice(0, 10), { revenue: 0, orders: 0 });
+  }
+  let revenue = 0;
+  for (const o of orders) {
+    revenue += o.total;
+    const key = new Date(o.placedAt.getTime() - o.placedAt.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+    const bucket = byDay.get(key);
+    if (bucket) {
+      bucket.revenue += o.total;
+      bucket.orders += 1;
+    }
+  }
+
+  return {
+    days,
+    revenue,
+    orders: orders.length,
+    averageOrder: orders.length ? Math.round(revenue / orders.length) : 0,
+    awaiting: { unpaid, unfulfilled },
+    series: [...byDay.entries()].map(([day, v]) => ({ day, ...v })),
+    topProducts: top.map((t) => ({ productId: t.productId, title: t.title, quantity: t._sum.quantity ?? 0, revenue: t._sum.lineTotal ?? 0 })),
+  };
+}

@@ -227,3 +227,24 @@ export async function previewRules(rules: CollectionRules): Promise<{ count: num
   ]);
   return { count, sample };
 }
+
+// ---- admin dashboard: low stock ------------------------------------------------
+
+export const LOW_STOCK_THRESHOLD = 5;
+
+/** Variants at or below the threshold (sellable = available − reserved), lowest first. */
+export async function lowStockVariants(limit = 8) {
+  const rows = await db.inventoryItem.findMany({
+    where: { available: { lte: LOW_STOCK_THRESHOLD } },
+    orderBy: { available: "asc" },
+    take: limit,
+    include: { variant: { select: { id: true, title: true, sku: true, product: { select: { id: true, title: true, status: true } } } } },
+  });
+  return rows
+    .filter((r) => r.variant.product.status === "ACTIVE")
+    .map((r) => ({ variantId: r.variant.id, productId: r.variant.product.id, product: r.variant.product.title, variant: r.variant.title, sku: r.variant.sku, available: r.available, reserved: r.reserved }));
+}
+
+export async function lowStockCount(): Promise<number> {
+  return db.inventoryItem.count({ where: { available: { lte: LOW_STOCK_THRESHOLD }, variant: { product: { status: "ACTIVE" } } } });
+}
