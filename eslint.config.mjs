@@ -61,9 +61,9 @@ const eslintConfig = defineConfig([
     rules: { "no-restricted-imports": "off", "no-restricted-syntax": "off" },
   },
   {
-    // Seed data and scripts are not UI code; og-palette.ts mirrors tokens.css
-    // for Satori, which cannot read CSS variables.
-    files: ["prisma/**/*.ts", "scripts/**/*.mjs", "src/lib/og-palette.ts"],
+    // Seed data and scripts are not UI code; inline-palette.ts mirrors tokens.css
+    // for Satori (OG images) and email inline styles, which cannot read CSS variables.
+    files: ["prisma/**/*.ts", "scripts/**/*.mjs", "src/lib/inline-palette.ts"],
     rules: { "no-restricted-syntax": "off" },
   },
   // Override default ignores of eslint-config-next.

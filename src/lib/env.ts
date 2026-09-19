@@ -29,9 +29,8 @@ const schema = z.object({
   // Cron: shared secret for /api/cron/* routes.
   CRON_SECRET: z.string().min(16).optional(),
 
-  // Email (Resend)
+  // Email (Resend). Optional: without a key the outbox marks jobs SKIPPED.
   RESEND_API_KEY: z.string().startsWith("re_").optional(),
-  EMAIL_FROM: z.string().min(3).optional(),
 });
 
 export type Env = z.infer<typeof schema>;

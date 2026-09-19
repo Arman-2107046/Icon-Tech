@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { og } from "@/src/lib/og-palette";
+import { og } from "@/src/lib/inline-palette";
 import { getStorefrontCollection } from "@/src/modules/catalog";
 import { getCachedSiteSettings } from "@/src/modules/content";
 
