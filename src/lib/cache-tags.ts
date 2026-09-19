@@ -20,6 +20,7 @@ export const tags = {
   pages: "pages",
   page: (handle: string) => `page:${handle}`,
   shipping: "shipping",
+  discounts: "discounts",
 } as const;
 
 /** Tags to expire when a product (or its variants/media/options) changes. */
