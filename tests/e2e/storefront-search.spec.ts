@@ -24,8 +24,23 @@ test.describe("search", () => {
 
     // The form submits to the same page.
     await page.getByLabel("Search products").fill("desk lamp");
-    await page.getByRole("button", { name: "Search" }).click();
+    await page.getByRole("search").getByRole("button", { name: "Search" }).click();
     await expect(page).toHaveURL(/\/search\?q=desk\+lamp/);
     await expect(page.getByTestId("product-card").first()).toContainText("Plinth Desk Lamp");
   });
+});
+
+test("header instant search shows thumbnails and navigates", async ({ page }) => {
+  await go(page, "/");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const box = page.getByTestId("instant-search");
+  await box.getByRole("combobox").fill("aria buds");
+  const options = box.getByRole("option");
+  await expect(options.first()).toContainText("Aria Buds Pro");
+  await expect(options.first().locator("img")).toHaveCount(1);
+  await expect(box.getByRole("link", { name: /All results for/ })).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/products\/aria-buds-pro/);
 });

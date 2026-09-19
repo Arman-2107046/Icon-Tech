@@ -13,6 +13,7 @@ import { cleanOptions, combinations, planVariants } from "./matrix";
 import { fromMajorUnits } from "@/src/lib/money";
 import { deleteUpload } from "@/src/lib/storage";
 import { coverImagesFor, previewRules, searchProductsBrief } from "./queries";
+import { quickSearch } from "./search";
 import { collectionRulesSchema } from "./rules";
 import { MAX_VARIANTS, collectionInputSchema, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
 
@@ -435,5 +436,19 @@ export async function previewCollectionRules(raw: unknown): Promise<ActionResult
     const parsed = collectionRulesSchema.safeParse(raw);
     if (!parsed.success) return failFromZod(parsed.error);
     return ok(await previewRules(parsed.data));
+  });
+}
+
+// ---- storefront: instant search ---------------------------------------------
+
+export type InstantHit = { id: string; handle: string; title: string; vendor: string | null; price: number; image: string | null };
+
+/** Public: a few ranked hits for the header dropdown. */
+export async function instantSearch(query: string): Promise<ActionResult<InstantHit[]>> {
+  return runAction<InstantHit[]>(async () => {
+    const q = query.trim();
+    if (q.length < 2) return ok([]);
+    const hits = await quickSearch(q, 6);
+    return ok(hits.map((h) => ({ id: h.id, handle: h.handle, title: h.title, vendor: h.vendor, price: h.priceMin, image: h.image?.url ?? null })));
   });
 }
