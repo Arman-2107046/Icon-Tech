@@ -6,3 +6,4 @@ export * from "./types";
 export { createOrderFromCart, OrderError, type AddressSnapshot, type CreateOrderInput } from "./service";
 export * from "./state-machine";
 export { queueOrderEmail, type OrderEmailKind } from "./emails";
+export * from "./csv";

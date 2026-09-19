@@ -158,3 +158,7 @@ export {
 
 export * from "./collection-query";
 export * from "./product-view";
+
+// ---- CSV import (browser-safe summary for the admin UI) ----------------------
+export type ImportIssue = { line: number; message: string };
+export type ImportSummary = { dryRun: boolean; productsCreated: number; productsUpdated: number; variantsCreated: number; variantsUpdated: number; issues: ImportIssue[] };

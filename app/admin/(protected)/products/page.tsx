@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { DataTable, DataTableToolbar, type Column } from "@/src/admin/components/data-table";
 import { PageHeader } from "@/src/admin/components/page-header";
 import { StatusBadge } from "@/src/admin/components/status-badge";
 import { Button } from "@/src/admin/components/ui/button";
+import { ImportProductsButton } from "@/src/admin/features/import-export/import-products-button";
 import { formatDate, formatPriceRange } from "@/src/admin/lib/format";
 import { parseTableParams, skipTake } from "@/src/admin/lib/table-params";
 import { requireAdmin } from "@/src/lib/auth/guards";
@@ -68,10 +69,18 @@ export default async function ProductsPage({ searchParams }: PageProps<"/admin/p
         title="Products"
         description={`${total} total`}
         actions={
-          <Button size="sm" nativeButton={false} render={<Link href="/admin/products/new" />}>
-            <Plus className="size-4" />
-            Add product
-          </Button>
+          <span className="flex items-center gap-2">
+            <Button size="sm" variant="outline" nativeButton={false} render={<a href="/api/admin/export/products" download aria-label="Export CSV" />}>
+              <Download className="size-4" />
+              <span className="hidden md:inline">Export CSV</span>
+            </Button>
+            <ImportProductsButton />
+            <Button size="sm" nativeButton={false} render={<Link href="/admin/products/new" />}>
+              <Plus className="size-4" />
+              <span className="hidden sm:inline">Add product</span>
+              <span className="sr-only sm:hidden">Add product</span>
+            </Button>
+          </span>
         }
       />
       <div className="space-y-4 p-6">

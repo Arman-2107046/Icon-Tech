@@ -1,6 +1,8 @@
 import { DataTable, DataTableToolbar, type Column } from "@/src/admin/components/data-table";
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from "@/src/admin/components/order-badges";
+import { Download } from "lucide-react";
 import { PageHeader } from "@/src/admin/components/page-header";
+import { Button } from "@/src/admin/components/ui/button";
 import { formatDateTime } from "@/src/admin/lib/format";
 import { parseTableParams, skipTake } from "@/src/admin/lib/table-params";
 import { requireAdmin } from "@/src/lib/auth/guards";
@@ -44,7 +46,16 @@ export default async function OrdersPage({ searchParams }: PageProps<"/admin/ord
   });
   return (
     <>
-      <PageHeader title="Orders" description={`${total} total`} />
+      <PageHeader
+        title="Orders"
+        description={`${total} total`}
+        actions={
+          <Button size="sm" variant="outline" nativeButton={false} render={<a href="/api/admin/export/orders" download aria-label="Export CSV" />}>
+            <Download className="size-4" />
+            <span className="hidden md:inline">Export CSV</span>
+          </Button>
+        }
+      />
       <div className="space-y-4 p-6">
         <DataTableToolbar
           searchPlaceholder="Search #number, name or email…"

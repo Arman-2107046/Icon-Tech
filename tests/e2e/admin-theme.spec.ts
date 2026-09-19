@@ -20,7 +20,7 @@ const bodyBg = (page: Page) => page.evaluate(() => getComputedStyle(document.bod
 test.describe("admin theme", () => {
   test.use({ colorScheme: "dark" });
 
-  test("follows the OS by default, can be forced light or dark, and persists", async ({ page }) => {
+  test("follows the OS by default, can be forced light or dark, and persists", async ({ page }, testInfo) => {
     await login(page);
     await page.goto("/admin/customers");
 
@@ -42,7 +42,9 @@ test.describe("admin theme", () => {
     expect(await page.evaluate(() => localStorage.getItem("icon-admin-theme"))).toBe("dark");
 
     // Sidebar and content share the same scheme: both backgrounds are dark.
-    const sidebarBg = await page.locator('[data-slot="sidebar-inner"]').evaluate((el) => getComputedStyle(el).backgroundColor);
+    // (On mobile the sidebar lives in a sheet that opens from the trigger.)
+    if (testInfo.project.name === "mobile") await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+    const sidebarBg = await page.locator('[data-sidebar="sidebar"]').first().evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(sidebarBg).not.toBe(lightBg);
   });
 });

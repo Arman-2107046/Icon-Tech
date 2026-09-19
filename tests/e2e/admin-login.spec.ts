@@ -19,13 +19,14 @@ test.describe("admin login", () => {
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/admin$/);
-    await expect(page.getByText(`Signed in as ${EMAIL}`)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
     // On narrow viewports the sidebar is an off-canvas sheet; open it first.
     const signOut = page.getByRole("button", { name: "Sign out" });
     if (!(await signOut.isVisible())) {
       await page.getByRole("button", { name: "Toggle Sidebar" }).click();
     }
+    await expect(page.getByText(EMAIL)).toBeVisible();
     await signOut.click();
     await expect(page).toHaveURL(/\/admin\/login$/);
   });
