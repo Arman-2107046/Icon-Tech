@@ -8,7 +8,7 @@ import { Pagination } from "@/src/storefront/components/collection/pagination";
 import { SortSelect } from "@/src/storefront/components/collection/sort-select";
 import { CardGrid, Container, Section } from "@/src/storefront/components/layout";
 import { ProductCard } from "@/src/storefront/components/product-card";
-import { Button } from "@/src/storefront/components/ui";
+import { EmptyState } from "@/src/storefront/components/empty-state";
 
 export async function generateMetadata({ params }: PageProps<"/collections/[handle]">): Promise<Metadata> {
   const { handle } = await params;
@@ -133,11 +133,8 @@ async function Listing({
 
 function Empty({ basePath, message }: { basePath: string; message: string }) {
   return (
-    <div className="mt-s4 rounded-sf-lg border border-dashed border-line-strong p-s8 text-center">
-      <p className="display display-md">{message}</p>
-      <Button href={basePath} variant="secondary" className="mt-s3">
-        Clear filters
-      </Button>
+    <div className="mt-s4 rounded-sf-lg border border-dashed border-line-strong">
+      <EmptyState compact art="search" title={message} body="Loosen a filter or two, or clear them all to see everything in this collection." action={{ label: "Clear filters", href: basePath }} testId="collection-empty" />
     </div>
   );
 }

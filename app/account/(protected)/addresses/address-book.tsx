@@ -5,6 +5,7 @@ import { useCallback, useState, useTransition } from "react";
 import { COUNTRIES } from "@/src/modules/checkout/types";
 import { deleteAddress, saveAddress } from "@/src/modules/customers/actions";
 import { Form, FormCheckbox, FormInput, FormSelect, useForm } from "@/src/storefront/components/form";
+import { EmptyState } from "@/src/storefront/components/empty-state";
 import { Badge, Button } from "@/src/storefront/components/ui";
 
 export type AddressRow = { id: string; firstName: string; lastName: string; company: string | null; line1: string; line2: string | null; city: string; region: string | null; postalCode: string | null; country: string; isDefault: boolean };
@@ -20,7 +21,11 @@ export function AddressBook({ addresses }: { addresses: AddressRow[] }) {
 
   return (
     <div className="mt-s5 space-y-s3" data-testid="address-book">
-      {addresses.length === 0 && editing !== "new" ? <p className="body text-ink-muted">No saved addresses yet. Add one to speed up checkout.</p> : null}
+      {addresses.length === 0 && editing !== "new" ? (
+        <div className="rounded-sf-lg border border-dashed border-line-strong">
+          <EmptyState compact art="pin" title="No saved addresses" body="Save one here and checkout will fill it in for you." testId="addresses-empty" />
+        </div>
+      ) : null}
       <ul className="grid gap-s3 sm:grid-cols-2">
         {addresses.map((a) => (
           <li key={a.id} className="rounded-sf-lg border border-line bg-surface p-s3 text-t-sm" data-testid="address-card">

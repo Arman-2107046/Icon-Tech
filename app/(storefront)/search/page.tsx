@@ -4,6 +4,8 @@ import { searchProducts } from "@/src/modules/catalog";
 import { Pagination } from "@/src/storefront/components/collection/pagination";
 import { CardGrid, Container, Section } from "@/src/storefront/components/layout";
 import { ProductCard } from "@/src/storefront/components/product-card";
+import { EmptyState } from "@/src/storefront/components/empty-state";
+import { ProductGridSkeleton } from "@/src/storefront/components/skeletons";
 import { Button } from "@/src/storefront/components/ui";
 import { inputClasses } from "@/src/storefront/components/ui/input";
 
@@ -56,12 +58,8 @@ async function Results({ searchParams }: { searchParams: PageProps<"/search">["s
               ))}
             </CardGrid>
           ) : (
-            <div className="mt-s4 rounded-sf-lg border border-dashed border-line-strong p-s8 text-center">
-              <p className="display display-md">Nothing matched</p>
-              <p className="body body-sm mt-s1 text-ink-muted">Try a shorter word, a brand name, or browse the collections.</p>
-              <Button href="/collections/new-arrivals" variant="secondary" className="mt-s3">
-                New arrivals
-              </Button>
+            <div className="mt-s4 rounded-sf-lg border border-dashed border-line-strong">
+              <EmptyState compact art="search" title="Nothing matched" body="Try a shorter word, a brand name, or browse the collections." action={{ label: "New arrivals", href: "/collections/new-arrivals" }} testId="search-empty" />
             </div>
           )}
           <div className="mt-s8">
@@ -75,11 +73,16 @@ async function Results({ searchParams }: { searchParams: PageProps<"/search">["s
   );
 }
 
+/** Mirrors Results: the search row, the summary line, then the dense grid. */
 function Skeleton() {
   return (
     <div aria-busy>
-      <div className="h-12 max-w-xl animate-pulse rounded-sf-md bg-neutral-200" />
+      <div className="flex max-w-xl gap-s1">
+        <div className="h-12 flex-1 animate-pulse rounded-sf-md bg-neutral-200" />
+        <div className="h-12 w-24 animate-pulse rounded-sf-full bg-neutral-200" />
+      </div>
       <div className="mt-s5 h-4 w-40 animate-pulse rounded bg-neutral-200" />
+      <ProductGridSkeleton className="mt-s4" />
     </div>
   );
 }

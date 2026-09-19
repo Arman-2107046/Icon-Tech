@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { CartLine } from "@/src/modules/cart/types";
+import { EmptyState } from "@/src/storefront/components/empty-state";
 import { Button, Price } from "@/src/storefront/components/ui";
 import { cx } from "@/src/storefront/lib/cx";
 import { EASE } from "@/src/storefront/motion/reveal";
@@ -187,19 +188,8 @@ function CartLineRow({ line }: { line: CartLine }) {
 
 function EmptyCart({ onClose }: { onClose: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-s3 text-center" data-testid="cart-empty">
-      <svg width="120" height="120" viewBox="0 0 120 120" fill="none" aria-hidden className="text-neutral-300">
-        <path d="M22 40h76l-6 54H28L22 40z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
-        <path d="M42 40V30a18 18 0 0 1 36 0v10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M46 66c3 5 9 8 14 8s11-3 14-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx="48" cy="56" r="2" fill="currentColor" />
-        <circle cx="72" cy="56" r="2" fill="currentColor" />
-      </svg>
-      <p className="display display-md mt-s3">Your cart is empty</p>
-      <p className="body body-sm mt-s1 text-ink-muted">Nothing in here yet. The new arrivals are a good place to start.</p>
-      <Button href="/collections/new-arrivals" variant="secondary" className="mt-s4" onClick={onClose}>
-        Browse new arrivals
-      </Button>
+    <div className="flex h-full items-center justify-center">
+      <EmptyState compact art="bag" title="Your cart is empty" body="Nothing in here yet. The new arrivals are a good place to start." action={{ label: "Browse new arrivals", href: "/collections/new-arrivals", onClick: onClose }} testId="cart-empty" />
     </div>
   );
 }

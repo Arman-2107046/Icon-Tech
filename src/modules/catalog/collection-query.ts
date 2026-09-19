@@ -39,8 +39,10 @@ function num(v: string | string[] | undefined): number | null {
   const first = Array.isArray(v) ? v[0] : v;
   if (!first) return null;
   const n = Number(first.replace(/,/g, ""));
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  // Prices are stored as int4 minor units; clamp so a silly URL cannot overflow the query.
+  return Number.isFinite(n) && n >= 0 ? Math.min(n, MAX_PRICE_MAJOR) : null;
 }
+const MAX_PRICE_MAJOR = 10_000_000;
 
 export function parseCollectionQuery(raw: Raw): CollectionQuery {
   const sortRaw = Array.isArray(raw.sort) ? raw.sort[0] : raw.sort;
