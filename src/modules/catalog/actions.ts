@@ -15,7 +15,8 @@ import { deleteUpload } from "@/src/lib/storage";
 import { coverImagesFor, previewRules, searchProductsBrief } from "./queries";
 import { quickSearch } from "./search";
 import { collectionRulesSchema } from "./rules";
-import { MAX_VARIANTS, collectionInputSchema, mediaAltSchema, optionsInputSchema, productInputSchema, slugify, variantInputSchema } from "./types";
+import { collectionInputSchema, mediaAltSchema, optionsInputSchema, productInputSchema, variantInputSchema } from "./schemas";
+import { MAX_VARIANTS, slugify } from "./types";
 
 function expire(list: string[]): void {
   for (const tag of list) updateTag(tag);

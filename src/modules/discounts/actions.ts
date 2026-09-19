@@ -8,7 +8,8 @@ import { assertAdmin } from "@/src/lib/auth/guards";
 import { tags } from "@/src/lib/cache-tags";
 import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
-import { discountInputSchema, type DiscountInput } from "./types";
+import { discountInputSchema } from "./schemas";
+import type { DiscountInput } from "./types";
 
 function read(formData: FormData) {
   const s = (k: string) => String(formData.get(k) ?? "");

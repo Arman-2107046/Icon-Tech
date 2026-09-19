@@ -25,7 +25,8 @@ import { resolveCartDiscounts } from "@/src/modules/discounts";
 import type { AppliedDiscount } from "@/src/modules/discounts/types";
 import type { CartView } from "@/src/modules/cart/types";
 import { computeTotals, eligibleRates, pickTaxBps, type Totals } from "./totals";
-import { checkoutDataSchema, type CheckoutData, type CheckoutStep } from "./types";
+import { checkoutDataSchema } from "./schemas";
+import type { CheckoutData, CheckoutStep } from "./types";
 
 export type ShippingChoice = { id: string; name: string; price: number };
 

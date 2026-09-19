@@ -1,10 +1,6 @@
-// cart module — public types.
-
-import { z } from "zod";
+// cart module — public types. Browser-safe: no zod, no server imports.
 
 export const MAX_LINE_QUANTITY = 20;
-
-export const quantitySchema = z.coerce.number().int("Quantity must be a whole number").min(0).max(MAX_LINE_QUANTITY, `At most ${MAX_LINE_QUANTITY} per item`);
 
 export type CartLine = {
   id: string;

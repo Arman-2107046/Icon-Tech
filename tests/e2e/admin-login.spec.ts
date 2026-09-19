@@ -22,11 +22,12 @@ test.describe("admin login", () => {
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
     // On narrow viewports the sidebar is an off-canvas sheet; open it first.
-    const signOut = page.getByRole("button", { name: "Sign out" });
-    if (!(await signOut.isVisible())) {
+    // (The desktop rail is still in the DOM but hidden, so pick the visible copy.)
+    if (!(await page.getByRole("button", { name: "Sign out" }).isVisible())) {
       await page.getByRole("button", { name: "Toggle Sidebar" }).click();
     }
-    await expect(page.getByText(EMAIL)).toBeVisible();
+    const signOut = page.getByRole("button", { name: "Sign out" }).locator("visible=true");
+    await expect(page.getByText(EMAIL).locator("visible=true")).toBeVisible();
     await signOut.click();
     await expect(page).toHaveURL(/\/admin\/login$/);
   });

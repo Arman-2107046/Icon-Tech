@@ -6,7 +6,8 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/src/lib/db";
 import { tags } from "@/src/lib/cache-tags";
 import { buildMenuTree } from "./queries";
-import { DEFAULT_SITE_SETTINGS, siteSettingsSchema, type SiteSettings, type StorefrontMenu } from "./types";
+import { DEFAULT_SITE_SETTINGS, siteSettingsSchema } from "./schemas";
+import type { SiteSettings, StorefrontMenu } from "./types";
 
 export async function getCachedSiteSettings(): Promise<SiteSettings> {
   "use cache";

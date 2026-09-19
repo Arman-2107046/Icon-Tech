@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import type { CartLine } from "@/src/modules/cart/types";
+import { BagArt } from "@/src/storefront/components/art";
 import { EmptyState } from "@/src/storefront/components/empty-state";
 import { Button, Price } from "@/src/storefront/components/ui";
 import { cx } from "@/src/storefront/lib/cx";
@@ -63,7 +64,7 @@ export function CartDrawer() {
       <AnimatePresence onExitComplete={settle}>
         {open || mounted ? (
           open ? (
-            <motion.div
+            <m.div
               key="panel"
               className="flex h-full flex-col bg-surface shadow-e3"
               initial={{ x: "100%" }}
@@ -72,7 +73,7 @@ export function CartDrawer() {
               transition={reduced ? { duration: 0 } : SPRING}
             >
               <Panel cart={cart} loaded={loaded} error={error} dismissError={dismissError} closeDrawer={closeDrawer} />
-            </motion.div>
+            </m.div>
           ) : null
         ) : null}
       </AnimatePresence>
@@ -189,7 +190,7 @@ function CartLineRow({ line }: { line: CartLine }) {
 function EmptyCart({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex h-full items-center justify-center">
-      <EmptyState compact art="bag" title="Your cart is empty" body="Nothing in here yet. The new arrivals are a good place to start." action={{ label: "Browse new arrivals", href: "/collections/new-arrivals", onClick: onClose }} testId="cart-empty" />
+      <EmptyState compact art={BagArt} title="Your cart is empty" body="Nothing in here yet. The new arrivals are a good place to start." action={{ label: "Browse new arrivals", href: "/collections/new-arrivals", onClick: onClose }} testId="cart-empty" />
     </div>
   );
 }

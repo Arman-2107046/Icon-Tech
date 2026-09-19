@@ -4,6 +4,7 @@ import { getCheckoutState } from "@/src/modules/checkout";
 import { CheckoutSteps } from "@/src/storefront/checkout/checkout-steps";
 import { OrderSummary } from "@/src/storefront/checkout/order-summary";
 import { ReservationRefresher } from "@/src/storefront/checkout/reservation-refresher";
+import { BagArt } from "@/src/storefront/components/art";
 import { EmptyState } from "@/src/storefront/components/empty-state";
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
@@ -22,7 +23,7 @@ async function Checkout() {
   const state = await getCheckoutState();
   if (state.cart.lines.length === 0) {
     return (
-      <EmptyState art="bag" title="Your cart is empty" body="Add something to it and come back — we'll hold your place." action={{ label: "Browse new arrivals", href: "/collections/new-arrivals" }} testId="checkout-empty" />
+      <EmptyState art={BagArt} title="Your cart is empty" body="Add something to it and come back — we'll hold your place." action={{ label: "Browse new arrivals", href: "/collections/new-arrivals" }} testId="checkout-empty" />
     );
   }
   return (

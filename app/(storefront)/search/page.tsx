@@ -4,6 +4,7 @@ import { searchProducts } from "@/src/modules/catalog";
 import { Pagination } from "@/src/storefront/components/collection/pagination";
 import { CardGrid, Container, Section } from "@/src/storefront/components/layout";
 import { ProductCard } from "@/src/storefront/components/product-card";
+import { SearchArt } from "@/src/storefront/components/art";
 import { EmptyState } from "@/src/storefront/components/empty-state";
 import { ProductGridSkeleton } from "@/src/storefront/components/skeletons";
 import { Button } from "@/src/storefront/components/ui";
@@ -59,7 +60,7 @@ async function Results({ searchParams }: { searchParams: PageProps<"/search">["s
             </CardGrid>
           ) : (
             <div className="mt-s4 rounded-sf-lg border border-dashed border-line-strong">
-              <EmptyState compact art="search" title="Nothing matched" body="Try a shorter word, a brand name, or browse the collections." action={{ label: "New arrivals", href: "/collections/new-arrivals" }} testId="search-empty" />
+              <EmptyState compact art={SearchArt} title="Nothing matched" body="Try a shorter word, a brand name, or browse the collections." action={{ label: "New arrivals", href: "/collections/new-arrivals" }} testId="search-empty" />
             </div>
           )}
           <div className="mt-s8">

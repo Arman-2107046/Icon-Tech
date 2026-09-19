@@ -10,7 +10,7 @@ import { assertAdmin } from "@/src/lib/auth/guards";
 import { db } from "@/src/lib/db";
 import { isUniqueViolation } from "@/src/lib/db-errors";
 import { fromMajorUnits } from "@/src/lib/money";
-import { shippingRateInputSchema, shippingZoneInputSchema, taxRateInputSchema } from "./types";
+import { shippingRateInputSchema, shippingZoneInputSchema, taxRateInputSchema } from "./schemas";
 
 // ---- shipping zones ---------------------------------------------------------
 
@@ -197,7 +197,8 @@ import { getPaymentProvider } from "./payments";
 import { checkEligibility } from "@/src/modules/discounts";
 import { canCombine } from "@/src/modules/discounts/types";
 import { getCheckoutState, LAST_ORDER_COOKIE, readCheckoutData, resolveShippingRates } from "./queries";
-import { addressSchema, contactSchema, type CheckoutData, type CheckoutStep } from "./types";
+import { addressSchema, contactSchema } from "./schemas";
+import type { CheckoutData, CheckoutStep } from "./types";
 
 async function activeCart() {
   const token = await readCartToken();

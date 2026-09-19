@@ -52,3 +52,6 @@ process.txt
 
 # uploaded media (local storage)
 /public/uploads/
+
+# Lighthouse CI
+.lighthouseci/

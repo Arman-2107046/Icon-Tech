@@ -3,7 +3,8 @@ import "server-only";
 
 import type { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/src/lib/db";
-import { DEFAULT_SITE_SETTINGS, siteSettingsSchema, type SiteSettings } from "./types";
+import { DEFAULT_SITE_SETTINGS, siteSettingsSchema } from "./schemas";
+import type { SiteSettings } from "./types";
 
 // ---- pages ------------------------------------------------------------------
 

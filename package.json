@@ -15,7 +15,9 @@
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "check:colors": "node scripts/check-colors.mjs",
-    "db:blurhash": "tsx --env-file=.env scripts/backfill-blurhash.ts"
+    "db:blurhash": "tsx --env-file=.env scripts/backfill-blurhash.ts",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "lighthouse": "lhci autorun"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -44,6 +46,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -58,6 +61,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wait-on": "^9.1.0"
   }
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireCustomer } from "@/src/lib/auth/guards";
 import { formatMoney, money } from "@/src/lib/money";
 import { listCustomerOrders } from "@/src/modules/customers";
+import { BoxArt } from "@/src/storefront/components/art";
 import { EmptyState } from "@/src/storefront/components/empty-state";
 import { Badge } from "@/src/storefront/components/ui";
 
@@ -21,7 +22,7 @@ export default async function AccountOrdersPage() {
       <h1 className="display display-2xl">Your orders</h1>
       {orders.length === 0 ? (
         <div className="mt-s5 rounded-sf-lg border border-dashed border-line-strong">
-          <EmptyState compact art="box" title="No orders yet" body="When you place an order it will show up here with its delivery status." action={{ label: "Start shopping", href: "/collections/new-arrivals" }} testId="orders-empty" />
+          <EmptyState compact art={BoxArt} title="No orders yet" body="When you place an order it will show up here with its delivery status." action={{ label: "Start shopping", href: "/collections/new-arrivals" }} testId="orders-empty" />
         </div>
       ) : (
         <ul className="mt-s5 divide-y divide-line rounded-sf-lg border border-line bg-surface" data-testid="account-orders">

@@ -12,7 +12,8 @@ import { isUniqueViolation } from "@/src/lib/db-errors";
 import { z } from "zod";
 import { fromMajorUnits } from "@/src/lib/money";
 import { getSiteSettings } from "./queries";
-import { homepageSectionSchema, menuInputSchema, menuItemInputSchema, pageInputSchema, siteSettingsSchema, slugify, type SiteSettings } from "./types";
+import { homepageSectionSchema, menuInputSchema, menuItemInputSchema, pageInputSchema, siteSettingsSchema } from "./schemas";
+import { slugify, type SiteSettings } from "./types";
 
 // ---- pages ------------------------------------------------------------------
 

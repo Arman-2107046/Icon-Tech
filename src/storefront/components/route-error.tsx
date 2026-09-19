@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { SparkArt } from "@/src/storefront/components/art";
 import { EmptyState } from "@/src/storefront/components/empty-state";
 import { Container, Section } from "@/src/storefront/components/layout";
 
@@ -12,7 +13,7 @@ export function RouteError({ error, reset, title = "Something went wrong", body 
   return (
     <Section space="lg">
       <Container>
-        <EmptyState art="spark" title={title} body={body} action={{ label: "Try again", onClick: reset }} secondary={{ label: "Back home", href: homeHref }} testId="route-error">
+        <EmptyState art={SparkArt} title={title} body={body} action={{ label: "Try again", onClick: reset }} secondary={{ label: "Back home", href: homeHref }} testId="route-error">
           {error.digest ? <p className="mt-s2 text-t-xs text-ink-subtle">Reference {error.digest}</p> : null}
         </EmptyState>
       </Container>

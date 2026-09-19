@@ -5,6 +5,7 @@ import { useCallback, useState, useTransition } from "react";
 import { COUNTRIES } from "@/src/modules/checkout/types";
 import { deleteAddress, saveAddress } from "@/src/modules/customers/actions";
 import { Form, FormCheckbox, FormInput, FormSelect, useForm } from "@/src/storefront/components/form";
+import { PinArt } from "@/src/storefront/components/art";
 import { EmptyState } from "@/src/storefront/components/empty-state";
 import { Badge, Button } from "@/src/storefront/components/ui";
 
@@ -23,7 +24,7 @@ export function AddressBook({ addresses }: { addresses: AddressRow[] }) {
     <div className="mt-s5 space-y-s3" data-testid="address-book">
       {addresses.length === 0 && editing !== "new" ? (
         <div className="rounded-sf-lg border border-dashed border-line-strong">
-          <EmptyState compact art="pin" title="No saved addresses" body="Save one here and checkout will fill it in for you." testId="addresses-empty" />
+          <EmptyState compact art={PinArt} title="No saved addresses" body="Save one here and checkout will fill it in for you." testId="addresses-empty" />
         </div>
       ) : null}
       <ul className="grid gap-s3 sm:grid-cols-2">

@@ -1,7 +1,7 @@
 "use client";
 
-import { Children, type ReactNode } from "react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { Children, useRef, type ReactNode } from "react";
+import { m, useInView, useReducedMotion, type Variants } from "framer-motion";
 
 /**
  * Scroll reveals. Fire once when ~15% of the element is in view, 250 ms
@@ -19,13 +19,16 @@ const item: Variants = {
 const still: Variants = { hidden: { opacity: 1, y: 0 }, shown: { opacity: 1, y: 0 } };
 const group: Variants = { hidden: {}, shown: { transition: { staggerChildren: STAGGER, delayChildren: 0.04 } } };
 
-const viewport = { once: true, amount: 0.15 } as const;
+const VIEWPORT = { once: true, amount: 0.15 } as const;
 
 export function Reveal({ children, className, as = "div", delay = 0 }: { children: ReactNode; className?: string; as?: "div" | "section" | "header" | "li"; delay?: number }) {
   const reduced = useReducedMotion();
-  const Tag = motion[as];
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, VIEWPORT);
+  // One ref type for every tag; the element kind never matters to useInView.
+  const Tag = m[as] as typeof m.div;
   return (
-    <Tag className={className} initial="hidden" whileInView="shown" viewport={viewport} variants={reduced ? still : item} transition={{ delay }}>
+    <Tag ref={ref} className={className} initial="hidden" animate={inView ? "shown" : "hidden"} variants={reduced ? still : item} transition={{ delay }}>
       {children}
     </Tag>
   );
@@ -34,13 +37,15 @@ export function Reveal({ children, className, as = "div", delay = 0 }: { childre
 /** Each direct child becomes a staggered reveal item; the grid classes stay on the group. */
 export function RevealGroup({ children, className }: { children: ReactNode; className?: string }) {
   const reduced = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, VIEWPORT);
   return (
-    <motion.div className={className} initial="hidden" whileInView="shown" viewport={viewport} variants={group}>
+    <m.div ref={ref} className={className} initial="hidden" animate={inView ? "shown" : "hidden"} variants={group}>
       {Children.map(children, (child) => (
-        <motion.div variants={reduced ? still : item}>
+        <m.div variants={reduced ? still : item}>
           {child}
-        </motion.div>
+        </m.div>
       ))}
-    </motion.div>
+    </m.div>
   );
 }

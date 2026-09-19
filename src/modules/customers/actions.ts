@@ -28,7 +28,7 @@ export async function subscribeNewsletter(_prev: ActionResult<null> | null, form
 // ---- account: addresses -----------------------------------------------------------
 
 import { getCustomerSession } from "@/src/lib/auth/session";
-import { addressSchema } from "@/src/modules/checkout/types";
+import { addressSchema } from "@/src/modules/checkout";
 
 function readAddress(formData: FormData) {
   const get = (k: string) => formData.get(k) ?? "";

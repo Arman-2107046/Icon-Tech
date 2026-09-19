@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import type { ViewMedia } from "@/src/modules/catalog/types";
 import { cx } from "@/src/storefront/lib/cx";
 
@@ -81,7 +81,7 @@ export function Gallery({ media, title }: { media: ViewMedia[]; title: string })
         {/* Cross-fade: the outgoing image fades while the new one fades in (variant switch / thumbnail). */}
         <AnimatePresence initial={false}>
           {current ? (
-            <motion.div
+            <m.div
               key={current.id}
               className="absolute inset-0"
               initial={{ opacity: 0 }}
@@ -100,7 +100,7 @@ export function Gallery({ media, title }: { media: ViewMedia[]; title: string })
                 className="object-cover transition-transform duration-200 ease-out"
                 style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
               />
-            </motion.div>
+            </m.div>
           ) : null}
         </AnimatePresence>
       </div>

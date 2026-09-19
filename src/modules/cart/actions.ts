@@ -8,7 +8,8 @@ import { STORE_CURRENCY } from "@/src/lib/money";
 import { getCustomerSession } from "@/src/lib/auth/session";
 import { findActiveCartByToken, getCart, toCartView } from "./queries";
 import { issueCartToken, readCartToken, signedCookieFor, writeCartCookie } from "./token";
-import { MAX_LINE_QUANTITY, quantitySchema, type CartView } from "./types";
+import { quantitySchema } from "./schemas";
+import { MAX_LINE_QUANTITY, type CartView } from "./types";
 
 /**
  * The visitor's active cart, creating one (and its signed cookie) when
