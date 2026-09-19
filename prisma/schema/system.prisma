@@ -74,3 +74,30 @@ model WebhookEvent {
   @@index([processedAt])
   @@map("webhook_events")
 }
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+/// Outbound transactional email. Rows are written by the app and drained
+/// by the /api/cron/send-emails worker, so a slow or failing provider never
+/// blocks a checkout. `payload` holds the template inputs.
+model EmailJob {
+  id        String      @id @default(cuid())
+  kind      String
+  to        String
+  subject   String
+  payload   Json
+  status    EmailStatus @default(QUEUED)
+  attempts  Int         @default(0)
+  lastError String?     @map("last_error")
+  sentAt    DateTime?   @map("sent_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("email_jobs")
+}

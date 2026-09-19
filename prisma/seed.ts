@@ -20,6 +20,7 @@ const RESET = process.argv.includes("--reset");
 /** Delete everything, children first, so FKs never block. */
 async function reset(): Promise<void> {
   const tables = [
+    "email_jobs",
     "webhook_events",
     "magic_link_tokens",
     "sessions",
