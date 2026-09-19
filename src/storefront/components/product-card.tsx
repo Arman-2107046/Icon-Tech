@@ -21,6 +21,8 @@ export function ProductCard({ product, priority = false, className }: { product:
               fill
               sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw"
               priority={priority}
+              placeholder={product.image.blur ? "blur" : "empty"}
+              blurDataURL={product.image.blur}
               className={cx("object-cover transition-[transform,opacity] duration-500 ease-out-expo group-hover:scale-[1.03]", product.hoverImage && "group-hover:opacity-0")}
             />
             {product.hoverImage ? (

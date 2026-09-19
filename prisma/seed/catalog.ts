@@ -1,5 +1,6 @@
 // Seeds 40 products with genuine variant structures. Filled in by item 25.
 
+import { blurhashFromUrl } from "../../src/lib/blurhash-from-url";
 import { db } from "../../src/lib/db";
 import { PRODUCTS, type SeedProduct } from "./data/products";
 import { bdt, cartesian, imageUrl, int, rng } from "./util";
@@ -115,14 +116,18 @@ async function seedProduct(product: SeedProduct, index: number, random: () => nu
   }
 
   const imageCount = product.images ?? 3;
+  const urls = Array.from({ length: imageCount }, (_, i) => imageUrl(`${product.handle}-${i + 1}`));
+  // Real placeholders for the storefront (skipped silently when offline).
+  const hashes = await Promise.all(urls.map((u) => blurhashFromUrl(u)));
   await db.media.createMany({
-    data: Array.from({ length: imageCount }, (_, i) => ({
+    data: urls.map((url, i) => ({
       ownerType: "PRODUCT" as const,
       ownerId: created.id,
-      url: imageUrl(`${product.handle}-${i + 1}`),
+      url,
       mimeType: "image/jpeg",
       width: 1200,
       height: 1500,
+      blurhash: hashes[i] ?? null,
       alt: i === 0 ? product.title : `${product.title}, view ${i + 1}`,
       position: i,
     })),

@@ -94,6 +94,8 @@ export function Gallery({ media, title }: { media: ViewMedia[]; title: string })
                 alt={current.alt || title}
                 fill
                 priority
+                placeholder={current.blur ? "blur" : "empty"}
+                blurDataURL={current.blur ?? undefined}
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 className="object-cover transition-transform duration-200 ease-out"
                 style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
@@ -108,7 +110,7 @@ export function Gallery({ media, title }: { media: ViewMedia[]; title: string })
         <div ref={trackRef} className="flex snap-x snap-mandatory overflow-x-auto rounded-sf-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-roledescription="carousel" aria-label="Product images">
           {media.map((m, i) => (
             <div key={m.id} className="relative aspect-[4/5] w-full shrink-0 snap-center bg-neutral-100" aria-roledescription="slide" aria-label={`${i + 1} of ${media.length}`}>
-              <Image src={m.url} alt={m.alt || title} fill priority={i === 0} sizes="100vw" className="object-cover" />
+              <Image src={m.url} alt={m.alt || title} fill priority={i === 0} placeholder={m.blur ? "blur" : "empty"} blurDataURL={m.blur ?? undefined} sizes="100vw" className="object-cover" />
             </div>
           ))}
         </div>

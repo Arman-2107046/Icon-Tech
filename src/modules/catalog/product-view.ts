@@ -1,7 +1,7 @@
 // Browser-safe view model for the product page and the pure selection
 // logic behind the variant picker. Unit-tested.
 
-export type ViewMedia = { id: string; url: string; alt: string; width: number; height: number; blurhash: string | null };
+export type ViewMedia = { id: string; url: string; alt: string; width: number; height: number; blurhash: string | null; /** blurDataURL derived from blurhash on the server. */ blur: string | null };
 
 export type ViewVariant = {
   id: string;

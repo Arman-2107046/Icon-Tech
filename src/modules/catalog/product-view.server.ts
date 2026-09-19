@@ -1,11 +1,13 @@
 import "server-only";
 
+import { blurDataUrl } from "@/src/lib/blur";
+
 import { renderMarkdown } from "@/src/lib/markdown";
 import type { ProductView, ViewMedia } from "./product-view";
 import type { StorefrontProduct } from "./storefront";
 
 function toMedia(m: { id: string; url: string; alt: string; width: number; height: number; blurhash: string | null }): ViewMedia {
-  return { id: m.id, url: m.url, alt: m.alt, width: m.width, height: m.height, blurhash: m.blurhash };
+  return { id: m.id, url: m.url, alt: m.alt, width: m.width, height: m.height, blurhash: m.blurhash, blur: blurDataUrl(m.blurhash) ?? null };
 }
 
 export function toProductView(product: StorefrontProduct): ProductView {

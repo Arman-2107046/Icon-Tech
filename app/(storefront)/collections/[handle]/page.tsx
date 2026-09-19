@@ -119,7 +119,7 @@ async function Listing({
         ) : (
           <CardGrid className="mt-s4" dense>
             {listing.products.map((p, i) => (
-              <ProductCard key={p.id} product={p} priority={i < 4} />
+              <ProductCard key={p.id} product={p} priority={i === 0} />
             ))}
           </CardGrid>
         )}

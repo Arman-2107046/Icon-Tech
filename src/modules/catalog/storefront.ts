@@ -5,6 +5,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@/src/generated/prisma/client";
+import { blurDataUrl } from "@/src/lib/blur";
 import { db } from "@/src/lib/db";
 import { tags } from "@/src/lib/cache-tags";
 import { COLLECTION_PAGE_SIZE, type CollectionQuery } from "./collection-query";
@@ -74,8 +75,8 @@ export async function listStorefrontProductCards(where: Prisma.ProductWhereInput
       priceMax: prices.length ? Math.max(...prices) : 0,
       compareAt: p.variants.find((v) => v.compareAtPrice)?.compareAtPrice ?? null,
       inStock: p.variants.some((v) => (v.inventory?.available ?? 0) - (v.inventory?.reserved ?? 0) > 0),
-      image: images[0] ?? null,
-      hoverImage: images[1] ?? null,
+      image: images[0] ? { ...images[0], blur: blurDataUrl(images[0].blurhash) } : null,
+      hoverImage: images[1] ? { ...images[1], blur: blurDataUrl(images[1].blurhash) } : null,
     };
   });
 }
@@ -92,7 +93,7 @@ export async function getStorefrontCollection(handle: string) {
   if (!collection) return null;
   const membership = collectionMembershipWhere(collection);
   const image = await db.media.findFirst({ where: { ownerType: "COLLECTION", ownerId: collection.id }, orderBy: { position: "asc" } });
-  return { ...collection, membership, image };
+  return { ...collection, membership, image: image ? { ...image, blur: blurDataUrl(image.blurhash) } : null };
 }
 
 export async function listStorefrontCollections() {

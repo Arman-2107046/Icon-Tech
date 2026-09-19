@@ -9,7 +9,13 @@ export async function HeroSection({ collection }: { collection?: string }) {
   const settings = await getCachedSiteSettings();
   const target = collection ? await getStorefrontCollection(collection) : null;
   const cards = target?.membership ? await listStorefrontProductCards(target.membership, 1) : [];
-  const image = target?.image ? { url: target.image.url, alt: target.image.alt } : cards[0]?.image ? { url: cards[0].image.url, alt: cards[0].image.alt } : target?.imageUrl ? { url: target.imageUrl, alt: "" } : null;
+  const image = target?.image
+    ? { url: target.image.url, alt: target.image.alt, blur: target.image.blur }
+    : cards[0]?.image
+      ? { url: cards[0].image.url, alt: cards[0].image.alt, blur: cards[0].image.blur }
+      : target?.imageUrl
+        ? { url: target.imageUrl, alt: "", blur: undefined }
+        : null;
 
   return (
     <Section space="none" className="overflow-hidden">
@@ -28,7 +34,7 @@ export async function HeroSection({ collection }: { collection?: string }) {
           </div>
         </div>
         <div className="relative aspect-[4/5] overflow-hidden rounded-sf-xl bg-neutral-100 lg:col-span-5 lg:col-start-8 lg:aspect-[5/6]">
-          {image ? <Image src={image.url} alt={image.alt} fill priority sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" /> : null}
+          {image ? <Image src={image.url} alt={image.alt} fill priority placeholder={image.blur ? "blur" : "empty"} blurDataURL={image.blur} sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" /> : null}
         </div>
       </Container>
     </Section>
