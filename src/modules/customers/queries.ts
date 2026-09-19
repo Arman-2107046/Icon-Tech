@@ -20,3 +20,21 @@ export async function getCustomerOrder(customerId: string, orderId: string) {
 export async function listCustomerAddresses(customerId: string) {
   return db.address.findMany({ where: { customerId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] });
 }
+
+// ---- admin --------------------------------------------------------------------
+
+export async function getCustomerForAdmin(id: string) {
+  const customer = await db.customer.findUnique({
+    where: { id },
+    include: {
+      addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] },
+      orders: { orderBy: { placedAt: "desc" }, select: { id: true, number: true, placedAt: true, status: true, financialStatus: true, fulfillmentStatus: true, total: true, _count: { select: { items: true } } } },
+      discountRedemptions: { orderBy: { createdAt: "desc" }, include: { discount: { select: { code: true } }, order: { select: { number: true } } } },
+    },
+  });
+  if (!customer) return null;
+  const counted = customer.orders.filter((o) => o.status !== "CANCELLED" && o.status !== "REFUNDED");
+  const lifetime = counted.reduce((n, o) => n + o.total, 0);
+  return { ...customer, stats: { orders: counted.length, lifetime, average: counted.length ? Math.round(lifetime / counted.length) : 0 } };
+}
+export type AdminCustomer = NonNullable<Awaited<ReturnType<typeof getCustomerForAdmin>>>;

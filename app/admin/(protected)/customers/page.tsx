@@ -65,7 +65,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/admin/
           searchPlaceholder="Search name or email…"
           filters={[{ key: "marketing", label: "Marketing", options: [{ value: "yes", label: "Subscribed" }, { value: "no", label: "Not subscribed" }] }]}
         />
-        <DataTable columns={columns} rows={rows} rowKey={(r) => r.id} params={params} total={total} emptyMessage="No customers match." />
+        <DataTable columns={columns} rows={rows} rowKey={(r) => r.id} rowHref={(r) => `/admin/customers/${r.id}`} params={params} total={total} emptyMessage="No customers match." />
       </div>
     </>
   );

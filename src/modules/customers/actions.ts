@@ -66,3 +66,24 @@ export async function deleteAddress(addressId: string): Promise<ActionResult<nul
     return ok(null);
   });
 }
+
+// ---- admin ---------------------------------------------------------------------
+
+import { assertAdmin } from "@/src/lib/auth/guards";
+
+export async function saveCustomerNote(customerId: string, _prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    const note = String(formData.get("note") ?? "").slice(0, 2000);
+    await db.customer.update({ where: { id: customerId }, data: { note } });
+    return ok(null);
+  });
+}
+
+export async function setCustomerMarketing(customerId: string, accepts: boolean): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    await assertAdmin();
+    await db.customer.update({ where: { id: customerId }, data: { acceptsMarketing: accepts } });
+    return ok(null);
+  });
+}
