@@ -13,12 +13,16 @@ test.describe("admin data table (customers)", () => {
     await login(page);
     await page.goto("/admin/customers");
     await expect(page.getByRole("heading", { name: "Customers" })).toBeVisible();
-    await expect(page.getByText(/1–25 of 60/)).toBeVisible();
+    // Seeded with 60 customers; e2e runs add more, so read the total from the page.
+    const summary = page.getByText(/1–25 of \d+/);
+    await expect(summary).toBeVisible();
+    const total = Number(/of (\d+)/.exec(await summary.innerText())?.[1]);
+    expect(total).toBeGreaterThanOrEqual(60);
 
     // Paginate.
     await page.getByRole("button", { name: "Next page" }).click();
     await expect(page).toHaveURL(/page=2/);
-    await expect(page.getByText(/26–50 of 60/)).toBeVisible();
+    await expect(page.getByText(new RegExp(`26–50 of ${total}`))).toBeVisible();
 
     // Sort by email ascending resets the page.
     await page.getByRole("button", { name: "Email" }).click();
@@ -35,11 +39,11 @@ test.describe("admin data table (customers)", () => {
     await expect(rows.first()).toContainText(/rahman/i);
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
-    expect(count).toBeLessThan(25);
+    expect(count).toBeLessThanOrEqual(25); // one page at most (e2e runs add Rahmans over time)
 
     // Clear resets everything.
     await page.getByRole("button", { name: "Clear" }).click();
     await expect(page).not.toHaveURL(/q=/);
-    await expect(page.getByText(/1–25 of 60/)).toBeVisible();
+    await expect(page.getByText(new RegExp(`1–25 of ${total}`))).toBeVisible();
   });
 });

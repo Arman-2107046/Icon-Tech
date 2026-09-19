@@ -9,7 +9,7 @@ test("customer detail: stats, orders, addresses, notes, marketing toggle", async
   await row.getByRole("link").first().click();
   await expect(page).toHaveURL(/\/admin\/customers\/[a-z0-9]+$/);
   await expect(page.getByTestId("customer-stats")).toContainText("Lifetime value");
-  await expect(page.getByText("Orders", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("main").getByText("Orders", { exact: true }).first()).toBeVisible();
 
   const note = `Prefers evening delivery ${Date.now()}`;
   await page.getByLabel("Staff notes").fill(note);

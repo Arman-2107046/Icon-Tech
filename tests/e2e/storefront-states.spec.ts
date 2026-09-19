@@ -9,7 +9,7 @@ test("empty states: 404 with chrome, search, checkout, cart, collection filters"
   await expect(page.getByRole("link", { name: "Back home" })).toBeVisible();
 
   await page.goto("/search?q=zzqqxxyyvv", { waitUntil: "domcontentloaded" });
-  const empty = page.getByTestId("search-empty");
+  const empty = page.getByRole("main").getByTestId("search-empty");
   await expect(empty).toBeVisible();
   await expect(empty.locator("svg").first()).toBeVisible();
   await expect(empty.getByRole("link", { name: "New arrivals" })).toBeVisible();
@@ -28,7 +28,8 @@ test("empty states: 404 with chrome, search, checkout, cart, collection filters"
   await expect(page.getByTestId("cart-drawer")).toBeHidden();
 
   await page.goto("/collections/new-arrivals?min=99999999", { waitUntil: "domcontentloaded" });
-  await expect(page.getByTestId("collection-empty")).toBeVisible();
-  await page.getByTestId("collection-empty").getByRole("link", { name: "Clear filters" }).click();
+  const collectionEmpty = page.getByRole("main").getByTestId("collection-empty");
+  await expect(collectionEmpty).toBeVisible();
+  await collectionEmpty.getByRole("link", { name: "Clear filters" }).click();
   await expect(page.getByTestId("product-card").first()).toBeVisible();
 });

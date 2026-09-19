@@ -20,7 +20,7 @@ test.describe("search", () => {
 
     // Nothing.
     await go(page, "/search?q=xyzzyplugh");
-    await expect(page.getByText("Nothing matched")).toBeVisible();
+    await expect(page.getByRole("main").getByText("Nothing matched")).toBeVisible();
 
     // The form submits to the same page.
     await page.getByLabel("Search products").fill("desk lamp");

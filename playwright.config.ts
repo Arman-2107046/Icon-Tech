@@ -10,8 +10,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // A single dev server backs the suite locally; more workers just contend.
-  workers: process.env.CI ? undefined : 2,
+  // A single dev server backs the suite locally; parallel workers make it
+  // recompile under load and time out (30 s) on the heavier admin/OG pages.
+  workers: process.env.CI ? undefined : 1,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL,

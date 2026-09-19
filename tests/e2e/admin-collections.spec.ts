@@ -99,7 +99,7 @@ test("rule collection: preview, edit, save, and products-list filter resolve rul
 
   // The products list filter resolves the rule instead of membership rows.
   await page.goto("/admin/products?collection=audio", { waitUntil: "domcontentloaded" });
-  await expect(page.getByText(`${all} total`)).toBeVisible();
+  await expect(page.getByText(`${all} total`)).toBeAttached(); // header description is hidden below sm
   await page.goto("/admin/products?collection=sale", { waitUntil: "domcontentloaded" });
   await expect(page.getByText(/^\d+ total$/)).not.toHaveText("0 total");
 });

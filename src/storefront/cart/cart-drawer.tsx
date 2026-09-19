@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import type { CartLine } from "@/src/modules/cart/types";
 import { BagArt } from "@/src/storefront/components/art";
@@ -40,6 +40,20 @@ export function CartDrawer() {
     setMounted(false);
   };
 
+  // Navigating away (Checkout, Browse) unmounts this layout before the exit
+  // animation ends; a modal dialog removed while open would leave the page
+  // inert. Close it synchronously on navigation and on unmount.
+  const closeNow = () => {
+    settle();
+    closeDrawer();
+  };
+  useLayoutEffect(() => {
+    const dialog = ref.current;
+    return () => {
+      if (dialog?.open) dialog.close();
+    };
+  }, []);
+
   return (
     <dialog
       ref={ref}
@@ -72,7 +86,7 @@ export function CartDrawer() {
               exit={{ x: "100%", transition: reduced ? { duration: 0 } : { type: "tween", duration: 0.22, ease: EASE } }}
               transition={reduced ? { duration: 0 } : SPRING}
             >
-              <Panel cart={cart} loaded={loaded} error={error} dismissError={dismissError} closeDrawer={closeDrawer} />
+              <Panel cart={cart} loaded={loaded} error={error} dismissError={dismissError} closeDrawer={closeDrawer} closeNow={closeNow} />
             </m.div>
           ) : null
         ) : null}
@@ -81,7 +95,7 @@ export function CartDrawer() {
   );
 }
 
-function Panel({ cart, loaded, error, dismissError, closeDrawer }: { cart: ReturnType<typeof useCart>["cart"]; loaded: boolean; error: string | null; dismissError: () => void; closeDrawer: () => void }) {
+function Panel({ cart, loaded, error, dismissError, closeDrawer, closeNow }: { cart: ReturnType<typeof useCart>["cart"]; loaded: boolean; error: string | null; dismissError: () => void; closeDrawer: () => void; closeNow: () => void }) {
   return (
     <>
         <div className="flex h-16 items-center justify-between border-b border-line px-s3">
@@ -118,7 +132,7 @@ function Panel({ cart, loaded, error, dismissError, closeDrawer }: { cart: Retur
               ))}
             </ul>
           ) : cart.lines.length === 0 ? (
-            <EmptyCart onClose={closeDrawer} />
+            <EmptyCart onClose={closeNow} />
           ) : (
             <ul className="divide-y divide-line" data-testid="cart-lines">
               {cart.lines.map((line) => (
@@ -135,7 +149,7 @@ function Panel({ cart, loaded, error, dismissError, closeDrawer }: { cart: Retur
               <Price amount={cart.subtotal} currency={cart.currency} size="md" data-testid="cart-subtotal" />
             </div>
             <p className="mt-s0-5 text-t-xs text-ink-subtle">Shipping and tax are calculated at checkout.</p>
-            <Button href="/checkout" size="lg" className="mt-s3 w-full" onClick={closeDrawer}>
+            <Button href="/checkout" size="lg" className="mt-s3 w-full" onClick={closeNow}>
               Checkout
             </Button>
             <button type="button" onClick={closeDrawer} className="mt-s2 w-full text-center text-t-sm text-ink-muted underline underline-offset-4 hover:text-ink">
