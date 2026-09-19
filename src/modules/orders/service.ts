@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@/src/lib/db";
 import type { Prisma } from "@/src/generated/prisma/client";
+import { planCommit } from "@/src/modules/checkout";
 
 /**
  * Turn a reserved cart into an order, in one transaction:
@@ -75,9 +76,13 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<{ id
 
     // Every line must be fully reserved by this cart and still in stock.
     const held = new Map(cart.reservations.map((r) => [r.variantId, r.quantity]));
-    for (const item of cart.items) {
-      if ((held.get(item.variantId) ?? 0) < item.quantity) throw new OrderError("Your checkout hold expired. Please review your cart.", "RESERVATION");
-      if ((item.variant.inventory?.available ?? 0) < item.quantity) throw new OrderError(`${item.variant.product.title} just sold out.`, "STOCK");
+    const plan = planCommit(
+      cart.items.map((item) => ({ variantId: item.variantId, title: item.variant.product.title, quantity: item.quantity, available: item.variant.inventory?.available ?? 0 })),
+      held,
+    );
+    if (!plan.ok) {
+      if (plan.problem.reason === "RESERVATION") throw new OrderError("Your checkout hold expired. Please review your cart.", "RESERVATION");
+      throw new OrderError(`${plan.problem.title} just sold out.`, "STOCK");
     }
 
     const covers = await tx.media.findMany({ where: { ownerType: "PRODUCT", ownerId: { in: cart.items.map((i) => i.variant.product.id) }, position: 0 }, select: { ownerId: true, url: true } });
@@ -130,11 +135,8 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<{ id
     }
 
     // Commit inventory and drop the holds.
-    for (const item of cart.items) {
-      await tx.inventoryItem.update({
-        where: { variantId: item.variantId },
-        data: { available: { decrement: item.quantity }, reserved: { decrement: held.get(item.variantId) ?? 0 } },
-      });
+    for (const u of plan.updates) {
+      await tx.inventoryItem.update({ where: { variantId: u.variantId }, data: { available: { increment: u.available }, reserved: { increment: u.reserved } } });
     }
     await tx.inventoryReservation.deleteMany({ where: { cartId: cart.id } });
     await tx.cart.update({ where: { id: cart.id }, data: { status: "CONVERTED" } });

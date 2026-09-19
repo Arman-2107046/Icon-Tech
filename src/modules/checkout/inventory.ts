@@ -60,6 +60,26 @@ export async function reserveCart(cartId: string): Promise<ReservationOutcome> {
   });
 }
 
+// ---- commit (pure) ---------------------------------------------------------
+
+export type CommitLine = { variantId: string; title: string; quantity: number; available: number };
+export type CommitProblem = { variantId: string; reason: "RESERVATION" | "STOCK"; title: string };
+export type CommitPlan = { ok: true; updates: { variantId: string; available: number; reserved: number }[] } | { ok: false; problem: CommitProblem };
+
+/**
+ * What placing the order does to inventory: every line must be fully held
+ * by this cart and still in stock; then available −= quantity and reserved
+ * −= what the cart held. Pure so the arithmetic is unit-tested; the order
+ * service applies the updates inside its transaction.
+ */
+export function planCommit(lines: readonly CommitLine[], holds: ReadonlyMap<string, number>): CommitPlan {
+  for (const line of lines) {
+    if ((holds.get(line.variantId) ?? 0) < line.quantity) return { ok: false, problem: { variantId: line.variantId, reason: "RESERVATION", title: line.title } };
+    if (line.available < line.quantity) return { ok: false, problem: { variantId: line.variantId, reason: "STOCK", title: line.title } };
+  }
+  return { ok: true, updates: lines.map((l) => ({ variantId: l.variantId, available: -l.quantity, reserved: -(holds.get(l.variantId) ?? 0) })) };
+}
+
 /** Give back every hold for a cart (abandoned checkout). */
 export async function releaseCart(cartId: string): Promise<void> {
   await db.$transaction(async (tx) => {

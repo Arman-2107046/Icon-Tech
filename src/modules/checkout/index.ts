@@ -3,6 +3,7 @@
 export * from "./queries";
 export * from "./actions";
 export * from "./types";
-export { releaseExpiredReservations, reserveCart, releaseCart } from "./inventory";
+export { addressSchema, checkoutDataSchema, contactSchema, countriesInputSchema, shippingRateInputSchema, shippingZoneInputSchema, taxRateInputSchema } from "./schemas";
+export { planCommit, releaseExpiredReservations, reserveCart, releaseCart, type CommitLine, type CommitPlan } from "./inventory";
 export * from "./totals";
 export { getPaymentProvider, listPaymentProviders, type PaymentProvider } from "./payments";
