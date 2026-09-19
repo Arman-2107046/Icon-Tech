@@ -190,7 +190,7 @@ import { redirect } from "next/navigation";
 import { getCustomerSession } from "@/src/lib/auth/session";
 import { env } from "@/src/lib/env";
 import { clearCartCookie, findActiveCartByToken, readCartToken } from "@/src/modules/cart";
-import { createOrderFromCart, OrderError } from "@/src/modules/orders";
+import { createOrderFromCart, OrderError, queueOrderEmail } from "@/src/modules/orders";
 import { reserveCart } from "./inventory";
 import { getPaymentProvider } from "./payments";
 import { getCheckoutState, LAST_ORDER_COOKIE, readCheckoutData, resolveShippingRates } from "./queries";
@@ -375,6 +375,7 @@ export async function placeOrder(_prev: ActionResult<null> | null, formData: For
 
     const provider = getPaymentProvider("COD");
     await provider.initiate({ id: created.id, number: created.number, total: created.total, currency: cart.currency, email: state.data.contact.email });
+    await queueOrderEmail(created.id, "order_confirmation");
 
     // Guest access to the confirmation page, and a fresh cart next visit.
     const store = await cookies();

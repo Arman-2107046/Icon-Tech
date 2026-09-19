@@ -98,3 +98,38 @@ test.describe("checkout", () => {
     expect(await ok.json()).toMatchObject({ ok: true, olderThanMinutes: 30 });
   });
 });
+
+test("placing an order queues a confirmation email that the worker processes", async ({ page, request }) => {
+  await releaseAllHolds(request);
+  const email = `mail+${Date.now().toString(36)}@example.com`;
+  await go(page, "/products/porter-tech-backpack");
+  await page.waitForLoadState("networkidle");
+  await page.getByTestId("option-Colour").getByRole("button", { name: "Navy" }).click();
+  await page.getByTestId("add-to-cart").click();
+  await page.getByTestId("cart-drawer").getByRole("link", { name: "Checkout" }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  const contact = page.getByTestId("step-contact");
+  await contact.getByRole("textbox", { name: "Email" }).fill(email);
+  await contact.getByRole("textbox", { name: "Phone" }).fill("+8801711000000");
+  await contact.getByRole("button", { name: "Continue to address" }).click();
+  const address = page.getByTestId("step-address");
+  await address.getByLabel("First name").fill("Nusrat");
+  await address.getByLabel("Last name").fill("Jahan");
+  await address.getByLabel("Address", { exact: true }).fill("Flat 3, House 9, Road 2");
+  await address.getByLabel("City").fill("Dhaka");
+  await address.getByRole("button", { name: "Continue to delivery" }).click();
+  await page.getByTestId("step-shipping").getByRole("button", { name: "Continue to payment" }).click();
+  await page.getByRole("button", { name: "Place order" }).click();
+  await expect(page).toHaveURL(/\/confirmation$/);
+
+  // Worker drains the outbox. Locally there is no Resend key, so the job is
+  // SKIPPED with a reason rather than silently "sent".
+  const secret = process.env.CRON_SECRET ?? "";
+  test.skip(!secret, "CRON_SECRET not set");
+  const res = await request.post("/api/cron/send-emails", { headers: { authorization: `Bearer ${secret}` } });
+  expect(res.status()).toBe(200);
+  const body = (await res.json()) as { ok: boolean; sent: number; skipped: number; failed: number };
+  expect(body.ok).toBe(true);
+  expect(body.failed).toBe(0);
+  expect(body.sent + body.skipped).toBeGreaterThan(0);
+});
