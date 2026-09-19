@@ -7,7 +7,7 @@ import { db } from "@/src/lib/db";
 import { STORE_CURRENCY } from "@/src/lib/money";
 import { getCustomerSession } from "@/src/lib/auth/session";
 import { findActiveCartByToken, getCart, toCartView } from "./queries";
-import { issueCartToken, readCartToken, writeCartCookie } from "./token";
+import { issueCartToken, readCartToken, signedCookieFor, writeCartCookie } from "./token";
 import { MAX_LINE_QUANTITY, quantitySchema, type CartView } from "./types";
 
 /**
@@ -102,4 +102,38 @@ export async function removeCartLine(lineId: string): Promise<ActionResult<CartV
 /** Read-only view for the drawer; never creates a cart or sets a cookie. */
 export async function fetchCart(): Promise<ActionResult<CartView>> {
   return runAction<CartView>(async () => ok(await getCart()));
+}
+
+// ---- login: merge guest cart into the customer's ------------------------------
+
+/**
+ * After a customer signs in: adopt the guest cart as theirs, or fold its
+ * lines into their existing active cart (quantities summed and capped),
+ * then point the cookie at the surviving cart.
+ */
+export async function mergeGuestCartIntoCustomer(customerId: string): Promise<void> {
+  const token = await readCartToken();
+  const guest = token ? await findActiveCartByToken(token) : null;
+  const owned = await db.cart.findFirst({ where: { customerId, status: "ACTIVE", ...(guest ? { id: { not: guest.id } } : {}) }, include: { items: true } });
+
+  if (guest && !owned) {
+    await db.cart.update({ where: { id: guest.id }, data: { customerId } });
+    return;
+  }
+  if (guest && owned) {
+    await db.$transaction(async (tx) => {
+      for (const item of guest.items) {
+        const existing = owned.items.find((i) => i.variantId === item.variantId);
+        const quantity = Math.min((existing?.quantity ?? 0) + item.quantity, MAX_LINE_QUANTITY);
+        await tx.cartItem.upsert({
+          where: { cartId_variantId: { cartId: owned.id, variantId: item.variantId } },
+          create: { cartId: owned.id, variantId: item.variantId, quantity },
+          update: { quantity },
+        });
+      }
+      await tx.cart.update({ where: { id: guest.id }, data: { status: "ABANDONED" } });
+    });
+  }
+  const survivor = owned ?? (await db.cart.findFirst({ where: { customerId, status: "ACTIVE" } }));
+  if (survivor) await writeCartCookie(signedCookieFor(survivor.token));
 }

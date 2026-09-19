@@ -16,6 +16,11 @@ function sign(token: string): string {
   return createHmac("sha256", env.SESSION_SECRET).update(`cart:${token}`).digest("base64url");
 }
 
+/** Cookie value for an existing cart token (login merges re-point the cookie). */
+export function signedCookieFor(token: string): string {
+  return `${token}.${sign(token)}`;
+}
+
 export function issueCartToken(): { token: string; cookieValue: string } {
   const token = randomBytes(18).toString("base64url");
   return { token, cookieValue: `${token}.${sign(token)}` };
