@@ -31,6 +31,12 @@ export async function Header() {
         </Suspense>
 
         <div className="ml-auto flex items-center gap-s0-5">
+          <Link href="/account" className="hidden size-11 items-center justify-center rounded-sf-full text-ink transition-colors hover:bg-neutral-100 lg:inline-flex" aria-label="Account">
+            <svg className="size-5" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.75" />
+              <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            </svg>
+          </Link>
           <SearchTrigger />
           <Suspense fallback={<CartTriggerFallback />}>
             <CartTrigger />

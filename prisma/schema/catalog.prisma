@@ -21,7 +21,7 @@ model Product {
   updatedAt      DateTime                 @updatedAt @map("updated_at")
   /// Generated tsvector over title/vendor/tags/description (see the
   /// product_search migration); Prisma never reads or writes it.
-  search         Unsupported("tsvector")?
+  search         Unsupported("tsvector")? @default(dbgenerated())
 
   options     ProductOption[]
   variants    Variant[]

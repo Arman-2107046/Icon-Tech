@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/account") && pathname !== "/account/login") {
+  if (pathname.startsWith("/account") && pathname !== "/account/login" && pathname !== "/account/verify") {
     if (!request.cookies.has(CUSTOMER_COOKIE)) {
       const url = new URL("/account/login", request.url);
       url.searchParams.set("next", pathname);

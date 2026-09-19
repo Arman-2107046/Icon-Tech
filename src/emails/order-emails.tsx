@@ -94,3 +94,18 @@ export function RefundedEmail({ p, storeName }: { p: OrderEmailPayload } & Ctx) 
     </EmailLayout>
   );
 }
+
+export function MagicLinkEmail({ link, storeName }: { link: string; storeName: string }) {
+  return (
+    <EmailLayout preview="Your sign-in link" storeName={storeName}>
+      <Heading style={emailStyles.h1}>Sign in to {storeName}</Heading>
+      <Text style={emailStyles.text}>Click the button to sign in. The link works once and expires in 15 minutes.</Text>
+      <Text style={emailStyles.text}>
+        <Link href={link} style={emailStyles.button}>
+          Sign in
+        </Link>
+      </Text>
+      <Text style={emailStyles.muted}>If you did not request this, you can ignore this email.</Text>
+    </EmailLayout>
+  );
+}
