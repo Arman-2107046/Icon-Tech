@@ -2,41 +2,86 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { CartLine } from "@/src/modules/cart/types";
 import { Button, Price } from "@/src/storefront/components/ui";
 import { cx } from "@/src/storefront/lib/cx";
+import { EASE } from "@/src/storefront/motion/reveal";
 import { useCart } from "./cart-context";
 
-/** Slide-in cart. A native <dialog> for focus trapping and Escape. */
+const SPRING = { type: "spring", stiffness: 420, damping: 38, mass: 0.9 } as const;
+
+/**
+ * Slide-in cart. A native <dialog> for focus trapping and Escape; the panel
+ * itself rides a spring, and the dialog only closes once the exit finishes.
+ */
 export function CartDrawer() {
   const { cart, loaded, open, closeDrawer, error, dismissError } = useCart();
   const ref = useRef<HTMLDialogElement>(null);
+  const reduced = useReducedMotion();
+  // The dialog stays open (modal, focus-trapped) until the panel has left.
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      setMounted(true);
+    }
   }, [open]);
+
+  const settle = () => {
+    const dialog = ref.current;
+    if (dialog?.open) dialog.close();
+    setMounted(false);
+  };
 
   return (
     <dialog
       ref={ref}
       aria-label="Cart"
       data-testid="cart-drawer"
+      data-state={open ? "open" : "closed"}
+      onCancel={(e) => {
+        // Escape: run the exit animation instead of snapping shut.
+        e.preventDefault();
+        closeDrawer();
+      }}
       onClose={closeDrawer}
       onClick={(e) => {
         if (e.target === ref.current) closeDrawer();
       }}
       className={cx(
-        "m-0 ml-auto h-dvh max-h-none w-[min(92vw,440px)] max-w-none bg-surface p-0 text-ink shadow-e3",
-        "backdrop:bg-ink/40 backdrop:backdrop-blur-sm",
-        "translate-x-full opacity-0 transition-[translate,opacity,display,overlay] duration-300 ease-out-expo transition-discrete",
-        "open:translate-x-0 open:opacity-100 starting:open:translate-x-full starting:open:opacity-0",
+        "m-0 ml-auto h-dvh max-h-none w-[min(92vw,440px)] max-w-none overflow-visible bg-transparent p-0 text-ink",
+        "backdrop:bg-ink/40 backdrop:backdrop-blur-sm backdrop:transition-opacity backdrop:duration-300",
+        open ? "backdrop:opacity-100" : "backdrop:opacity-0",
       )}
     >
-      <div className="flex h-full flex-col">
+      <AnimatePresence onExitComplete={settle}>
+        {open || mounted ? (
+          open ? (
+            <motion.div
+              key="panel"
+              className="flex h-full flex-col bg-surface shadow-e3"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%", transition: reduced ? { duration: 0 } : { type: "tween", duration: 0.22, ease: EASE } }}
+              transition={reduced ? { duration: 0 } : SPRING}
+            >
+              <Panel cart={cart} loaded={loaded} error={error} dismissError={dismissError} closeDrawer={closeDrawer} />
+            </motion.div>
+          ) : null
+        ) : null}
+      </AnimatePresence>
+    </dialog>
+  );
+}
+
+function Panel({ cart, loaded, error, dismissError, closeDrawer }: { cart: ReturnType<typeof useCart>["cart"]; loaded: boolean; error: string | null; dismissError: () => void; closeDrawer: () => void }) {
+  return (
+    <>
         <div className="flex h-16 items-center justify-between border-b border-line px-s3">
           <h2 className="display text-t-md">
             Cart{cart.count ? <span className="ml-s1 text-t-sm text-ink-muted">({cart.count})</span> : null}
@@ -96,8 +141,7 @@ export function CartDrawer() {
             </button>
           </div>
         ) : null}
-      </div>
-    </dialog>
+    </>
   );
 }
 

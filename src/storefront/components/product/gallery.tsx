@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { ViewMedia } from "@/src/modules/catalog/types";
 import { cx } from "@/src/storefront/lib/cx";
 
@@ -14,6 +15,7 @@ export function Gallery({ media, title }: { media: ViewMedia[]; title: string })
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
 
   // A variant switch swaps the list; start again from its first image.
   const key = media.map((m) => m.id).join(",");
@@ -76,18 +78,29 @@ export function Gallery({ media, title }: { media: ViewMedia[]; title: string })
         onMouseLeave={() => setZoom(null)}
         data-testid="gallery-main"
       >
-        {current ? (
-          <Image
-            key={current.id}
-            src={current.url}
-            alt={current.alt || title}
-            fill
-            priority
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            className="object-cover transition-transform duration-200 ease-out"
-            style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
-          />
-        ) : null}
+        {/* Cross-fade: the outgoing image fades while the new one fades in (variant switch / thumbnail). */}
+        <AnimatePresence initial={false}>
+          {current ? (
+            <motion.div
+              key={current.id}
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={reduced ? { duration: 0 } : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <Image
+                src={current.url}
+                alt={current.alt || title}
+                fill
+                priority
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover transition-transform duration-200 ease-out"
+                style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       {/* Swiper (mobile) */}

@@ -1,5 +1,6 @@
 import type { ComponentProps, ElementType, ReactNode } from "react";
 import { cx } from "@/src/storefront/lib/cx";
+import { Reveal, RevealGroup } from "@/src/storefront/motion/reveal";
 
 /**
  * Layout primitives. Sections carry the vertical rhythm (96–160px on
@@ -86,17 +87,17 @@ export function Split({ ratio = "7/5", flip = false, align = "start", gap = "lg"
 }
 
 export function CardGrid({ className, children, dense = false }: { className?: string; children: ReactNode; dense?: boolean }) {
-  return <div className={cx("grid grid-cols-2 gap-x-s2 gap-y-s5 md:grid-cols-3 md:gap-x-s3 md:gap-y-s8", dense ? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-4", className)}>{children}</div>;
+  return <RevealGroup className={cx("grid grid-cols-2 gap-x-s2 gap-y-s5 md:grid-cols-3 md:gap-x-s3 md:gap-y-s8", dense ? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-4", className)}>{children}</RevealGroup>;
 }
 
 /** Eyebrow + heading + optional lead, left-aligned by default. */
 export function SectionHeading({ eyebrow, title, lead, align = "start", size = "2xl", className }: { eyebrow?: string; title: string; lead?: string; align?: "start" | "center"; size?: "xl" | "2xl" | "3xl"; className?: string }) {
   return (
-    <div className={cx("flex flex-col gap-s2", align === "center" && "items-center text-center", className)}>
+    <Reveal className={cx("flex flex-col gap-s2", align === "center" && "items-center text-center", className)}>
       {eyebrow ? <span className="label text-ink-muted">{eyebrow}</span> : null}
       <h2 className={cx("display", `display-${size}`)}>{title}</h2>
       {lead ? <p className="body body-lg text-ink-muted">{lead}</p> : null}
-    </div>
+    </Reveal>
   );
 }
 
