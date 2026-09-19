@@ -21,6 +21,19 @@ describe("computeTotals", () => {
     expect(t.total).toBe(0);
   });
 
+  it("never goes negative and treats an empty cart as all zeros", () => {
+    expect(computeTotals({ subtotal: 0, discount: 500, shipping: 6000, taxBps: 500 })).toEqual({ subtotal: 0, discount: 0, taxable: 0, shipping: 6000, tax: 0, total: 6000 });
+    expect(computeTotals({ subtotal: 1000, discount: -50, shipping: -10, taxBps: -500 })).toEqual({ subtotal: 1000, discount: 0, taxable: 1000, shipping: 0, tax: 0, total: 1000 });
+  });
+
+  it("adds up: taxable + shipping + tax === total for a realistic order", () => {
+    const t = computeTotals({ subtotal: 1_250_000, discount: 125_000, shipping: 15_000, taxBps: 500 });
+    expect(t.taxable).toBe(1_125_000);
+    expect(t.tax).toBe(56_250);
+    expect(t.total).toBe(t.taxable + t.shipping + t.tax);
+    expect(t.total).toBe(1_196_250);
+  });
+
   it("rounds tax half up on the minor unit", () => {
     expect(computeTotals({ subtotal: 101, discount: 0, shipping: 0, taxBps: 500 }).tax).toBe(5); // 5.05 -> 5
     expect(computeTotals({ subtotal: 110, discount: 0, shipping: 0, taxBps: 500 }).tax).toBe(6); // 5.5 -> 6
@@ -49,7 +62,7 @@ describe("eligibleRates / pickTaxBps", () => {
 
 describe("addressSchema", () => {
   it("re-parses its own output (nulls for blank optionals)", async () => {
-    const { addressSchema, checkoutDataSchema } = await import("@/src/modules/checkout/types");
+    const { addressSchema, checkoutDataSchema } = await import("@/src/modules/checkout/schemas");
     const first = addressSchema.parse({ firstName: "A", lastName: "B", company: "", line1: "House 1", line2: "", city: "Dhaka", region: "", postalCode: "", country: "bd" });
     expect(first.region).toBeNull();
     expect(first.country).toBe("BD");
