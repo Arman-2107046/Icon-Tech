@@ -36,7 +36,8 @@ export type CreateOrderInput = {
   shippingMethod: string;
   shippingTotal: number;
   taxBps: number;
-  discount: { code: string; id: string; amount: number; freeShipping: boolean } | null;
+  /** Already-resolved discounts (see discounts/applyDiscounts); amounts sum to the discount total. */
+  discounts: { code: string; id: string; amount: number; freeShipping: boolean }[];
   provider: "COD";
   note: string;
 };
@@ -95,9 +96,9 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<{ id
       lineTotal: item.variant.price * item.quantity,
     }));
     const subtotal = items.reduce((n, i) => n + i.lineTotal, 0);
-    const discountTotal = Math.min(input.discount?.amount ?? 0, subtotal);
+    const discountTotal = Math.min(input.discounts.reduce((n, d) => n + d.amount, 0), subtotal);
     const taxable = subtotal - discountTotal;
-    const shippingTotal = input.discount?.freeShipping ? 0 : input.shippingTotal;
+    const shippingTotal = input.discounts.some((d) => d.freeShipping) ? 0 : input.shippingTotal;
     const taxTotal = Math.round((taxable * input.taxBps) / 10000);
     const total = taxable + shippingTotal + taxTotal;
 
@@ -116,7 +117,7 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<{ id
         taxTotal,
         total,
         shippingMethod: input.shippingMethod,
-        discountCode: input.discount?.code ?? null,
+        discountCode: input.discounts.length ? input.discounts.map((d) => d.code).join(" + ") : null,
         note: input.note,
         items: { create: items },
         payments: { create: { provider: input.provider, amount: total, currency: cart.currency, status: "PENDING" } },
@@ -124,8 +125,8 @@ export async function createOrderFromCart(input: CreateOrderInput): Promise<{ id
       select: { id: true, number: true },
     });
 
-    if (input.discount) {
-      await tx.discountRedemption.create({ data: { discountId: input.discount.id, orderId: order.id, customerId: input.customerId, amount: discountTotal } });
+    if (input.discounts.length) {
+      await tx.discountRedemption.createMany({ data: input.discounts.map((d) => ({ discountId: d.id, orderId: order.id, customerId: input.customerId, amount: d.amount })) });
     }
 
     // Commit inventory and drop the holds.

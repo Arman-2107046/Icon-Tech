@@ -105,7 +105,8 @@ export const checkoutDataSchema = z.object({
   /** Null = same as shipping. */
   billingAddress: addressSchema.nullable().optional(),
   shippingRateId: z.string().optional(),
-  discountCode: z.string().optional(),
+  /** Codes the customer applied; re-validated on every read. */
+  discountCodes: z.array(z.string()).default([]),
 });
 export type CheckoutData = z.infer<typeof checkoutDataSchema>;
 

@@ -21,6 +21,8 @@ export type TaxRateRow = Awaited<ReturnType<typeof listTaxRates>>[number];
 import { cookies } from "next/headers";
 import { getCustomerSession } from "@/src/lib/auth/session";
 import { getCart, readCartToken } from "@/src/modules/cart";
+import { resolveCartDiscounts } from "@/src/modules/discounts";
+import type { AppliedDiscount } from "@/src/modules/discounts/types";
 import type { CartView } from "@/src/modules/cart/types";
 import { computeTotals, eligibleRates, pickTaxBps, type Totals } from "./totals";
 import { checkoutDataSchema, type CheckoutData, type CheckoutStep } from "./types";
@@ -36,16 +38,18 @@ export type CheckoutState = {
   selectedRate: ShippingChoice | null;
   taxBps: number;
   totals: Totals;
+  /** Codes that survived validation, with what each takes off. */
+  discounts: AppliedDiscount[];
   savedAddresses: { id: string; label: string; address: Record<string, string | null> }[];
   customer: { id: string; email: string; firstName: string; lastName: string } | null;
 };
 
 export async function readCheckoutData(): Promise<CheckoutData> {
   const token = await readCartToken();
-  if (!token) return { step: "contact" };
+  if (!token) return { step: "contact", discountCodes: [] };
   const cart = await db.cart.findFirst({ where: { token, status: "ACTIVE" }, select: { checkoutData: true } });
   const parsed = checkoutDataSchema.safeParse(cart?.checkoutData ?? {});
-  return parsed.success ? parsed.data : { step: "contact" };
+  return parsed.success ? parsed.data : { step: "contact", discountCodes: [] };
 }
 
 /** Rates the customer may pick given a country and discounted subtotal. */
@@ -74,8 +78,7 @@ export async function getCheckoutState(): Promise<CheckoutState> {
   const country = data.shippingAddress?.country ?? null;
   const region = data.shippingAddress?.region ?? null;
 
-  // Discount resolution lands in item 105; until then no discount applies.
-  const discount = { amount: 0, freeShipping: false };
+  const discount = await resolveCartDiscounts(data.discountCodes, { subtotal: cart.subtotal, customerId: session?.customer.id ?? null });
   const provisional = computeTotals({ subtotal: cart.subtotal, discount: discount.amount, shipping: 0, taxBps: 0 });
 
   const rates = country ? await resolveShippingRates(country, provisional.taxable) : [];
@@ -99,6 +102,7 @@ export async function getCheckoutState(): Promise<CheckoutState> {
     selectedRate,
     taxBps,
     totals,
+    discounts: discount.applied,
     savedAddresses,
     customer: session?.customer ?? null,
   };

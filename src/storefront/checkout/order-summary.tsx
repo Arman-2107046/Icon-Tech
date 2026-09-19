@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { CheckoutState } from "@/src/modules/checkout";
 import { Price } from "@/src/storefront/components/ui";
+import { DiscountCodes } from "./discount-codes";
 
 export function OrderSummary({ state }: { state: CheckoutState }) {
   const { cart, totals, selectedRate, data } = state;
@@ -22,12 +23,13 @@ export function OrderSummary({ state }: { state: CheckoutState }) {
           </li>
         ))}
       </ul>
+      <DiscountCodes applied={state.discounts} />
       <dl className="mt-s3 space-y-s1 border-t border-line pt-s3 text-t-sm">
         <Row label="Subtotal">
           <Price amount={totals.subtotal} size="sm" />
         </Row>
         {totals.discount > 0 ? (
-          <Row label={`Discount${data.discountCode ? ` (${data.discountCode})` : ""}`}>
+          <Row label={`Discount${state.discounts.length ? ` (${state.discounts.map((d) => d.code).join(" + ")})` : ""}`}>
             <span className="text-success">−<Price amount={totals.discount} size="sm" /></span>
           </Row>
         ) : null}

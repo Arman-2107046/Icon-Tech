@@ -3,6 +3,7 @@
 // checkout module — Server Actions. Every action returns an ActionResult; never throws.
 
 import { updateTag } from "next/cache";
+import { z } from "zod";
 import { type ActionResult, fail, failFromZod, ok, runAction, zodFieldErrors } from "@/src/lib/action-result";
 import { tags } from "@/src/lib/cache-tags";
 import { assertAdmin } from "@/src/lib/auth/guards";
@@ -193,6 +194,8 @@ import { clearCartCookie, findActiveCartByToken, readCartToken } from "@/src/mod
 import { createOrderFromCart, OrderError, queueOrderEmail } from "@/src/modules/orders";
 import { reserveCart } from "./inventory";
 import { getPaymentProvider } from "./payments";
+import { checkEligibility } from "@/src/modules/discounts";
+import { canCombine } from "@/src/modules/discounts/types";
 import { getCheckoutState, LAST_ORDER_COOKIE, readCheckoutData, resolveShippingRates } from "./queries";
 import { addressSchema, contactSchema, type CheckoutData, type CheckoutStep } from "./types";
 
@@ -364,7 +367,7 @@ export async function placeOrder(_prev: ActionResult<null> | null, formData: For
         shippingMethod: state.selectedRate.name,
         shippingTotal: state.selectedRate.price,
         taxBps: state.taxBps,
-        discount: null,
+        discounts: state.discounts,
         provider: "COD",
         note,
       });
@@ -385,4 +388,46 @@ export async function placeOrder(_prev: ActionResult<null> | null, formData: For
   });
   if (result.ok) redirect(`/checkout/${result.data.orderId}/confirmation`);
   return result;
+}
+
+// ---- discount codes -------------------------------------------------------------
+
+const codeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .min(1, "Enter a code")
+  .max(32, "That code is not valid.");
+
+/** Validate a code against the live cart and stacking rules, then store it. */
+export async function applyDiscountCode(_prev: ActionResult<null> | null, formData: FormData): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    const cart = await activeCart();
+    if (!cart || cart.items.length === 0) return fail("Your cart is empty.");
+    const parsed = codeSchema.safeParse(formData.get("code"));
+    if (!parsed.success) return fail("Please fix the highlighted fields.", { code: parsed.error.issues[0]?.message ?? "Enter a code" });
+    const code = parsed.data;
+
+    const state = await getCheckoutState();
+    if (state.discounts.some((d) => d.code === code)) return fail("Please fix the highlighted fields.", { code: "That code is already applied." });
+    const customerId = state.customer?.id ?? null;
+    const check = await checkEligibility(code, { subtotal: state.cart.subtotal, customerId });
+    if (!check.ok) return fail("Please fix the highlighted fields.", { code: check.reason });
+
+    const existing = await Promise.all(state.discounts.map((d) => checkEligibility(d.code, { subtotal: state.cart.subtotal, customerId })));
+    const existingRows = existing.flatMap((r) => (r.ok ? [r.discount] : []));
+    if (!canCombine(existingRows, check.discount)) return fail("Please fix the highlighted fields.", { code: "That code cannot be combined with the code already applied." });
+
+    await saveData(cart.id, (d) => ({ ...d, discountCodes: [...state.discounts.map((x) => x.code), code] }));
+    return ok(null);
+  });
+}
+
+export async function removeDiscountCode(code: string): Promise<ActionResult<null>> {
+  return runAction<null>(async () => {
+    const cart = await activeCart();
+    if (!cart) return ok(null);
+    await saveData(cart.id, (d) => ({ ...d, discountCodes: d.discountCodes.filter((c) => c !== code) }));
+    return ok(null);
+  });
 }
